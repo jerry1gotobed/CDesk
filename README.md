@@ -7,7 +7,8 @@ git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
 
 Modify the config.json to change the software and data path
-It is OK on pei2
+
+It is OK on pei2: /mnt/linzejie/CDesk
 
 Test command(pei2):
 ```
