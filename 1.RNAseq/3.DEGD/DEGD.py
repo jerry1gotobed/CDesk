@@ -32,6 +32,12 @@ def deseqMode(args):
     count_df = pd.read_csv(count_file, index_col=0, sep=',', header=0)
     count_df.to_csv(os.path.join(output_dir,'count.csv'),sep=',')
     
+    meta_test = pd.read_excel(meta_file,header=0,index_col=0) 
+    missing_elements = set(meta_test.index) - set(count_df.columns)
+    # 如果有不匹配的元素，抛出错误
+    if missing_elements:
+        raise ValueError(f"分组信息中的: {missing_elements}样本不在count文件中")
+    
     # 读取meta文件，里面存放分组信息，并分析
     metas = readMetaFile(meta_file)
     if plot:
@@ -107,7 +113,13 @@ def TMode(args):
     # 把count和fpkm等矩阵存储到输出目录
     count_df = pd.read_csv(count_file, index_col=0, sep=',', header=0)
     count_df.to_csv(os.path.join(output_dir,'count.csv'),sep=',')
- 
+    
+    meta_test = pd.read_excel(meta_file,header=0,index_col=0)
+    missing_elements = set(meta_test.index) - set(count_df.columns)
+    # 如果有不匹配的元素，抛出错误
+    if missing_elements:
+        raise ValueError(f"分组信息中的: {missing_elements}样本不在count文件中")
+
     # 读取meta文件，里面存放分组信息，并分析
     metas = readMetaFile(meta_file)
     if plot:
@@ -193,7 +205,14 @@ def gfoldMode(args):
     else:
         print(f"Species file not exist!")
         return
-    
+   
+    meta_test = pd.read_excel(meta_file,header=0,index_col=0)
+    bam_samples = [os.path.splitext(os.path.basename(f))[0] for f in os.listdir(input_dir) if f.endswith('.bam')]
+    missing_elements = set(meta_test.index) - set(bam_samples)
+    # 如果有不匹配的元素，抛出错误
+    if missing_elements:
+        raise ValueError(f"分组信息中的: {missing_elements}样本不在bam文件中")
+
     # 读取meta文件，里面存放分组信息   
     metas = readMetaFile(meta_file)
     

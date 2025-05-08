@@ -124,6 +124,15 @@ sample <- c(data_sample,dataref_sample)
 
 if (Group != "NO"){
   group = read_excel(Group)
+  if (!identical(sort(group$sample),sort(sample))){
+    error_message <- paste0(
+      "分组信息和样本不一致。\n",
+      "以下分组信息元素不在样本中: ", 
+      paste(group$sample[!group$sample %in% sample], collapse = ", "), "\n"
+    )
+    # 报错并退出程序
+    stop(error_message)
+  }
   group$tag = as.character(group$tag)
   data_unique_samples <- unique(group$tag[group$sample %in% data_sample])
   dataref_unique_samples <- unique(group$tag[group$sample %in% dataref_sample])

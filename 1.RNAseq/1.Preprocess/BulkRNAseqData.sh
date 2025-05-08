@@ -412,6 +412,7 @@ for file in ${Expression_path}/*.read_cnt; do
     mv ${Expression_path}/temp1.csv ${Expression_path}/output1.csv
 done
 
+# 加表头
 echo "gene_name,$(ls ${Expression_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
 
 # 将原始数据追加到临时文件中

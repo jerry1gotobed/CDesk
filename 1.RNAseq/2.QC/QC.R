@@ -33,6 +33,16 @@ logfpkm <- log2(data+1)
 meta = read_excel(group_file)
 meta$group = as.character(meta$group)
 
+if (!identical(sort(meta$sample),sort(colnames(data)))){
+  error_message <- paste0(
+    "分组信息和样本不一致。\n",
+    "以下分组信息元素不在样本中: ", 
+    paste(meta$sample[!meta$sample %in% colnames(data)], collapse = ", "), "\n"
+  )
+  # 报错并退出程序
+  stop(error_message)
+}
+
 # 构造样本类型
 COLS = as.numeric(factor(meta$group))
 COLS = cccol[COLS]
