@@ -7,7 +7,6 @@ channels:
 dependencies:
   - python=3.6
   - pip
-  # 原始工具集
   - trim-galore=0.6.4
   - hisat2=2.2.1
   - stringtie=2.2.1
@@ -15,18 +14,16 @@ dependencies:
   - samtools=1.18
   - fastqc=0.12.1
   - deeptools=3.3.2 
-  # 新增工具
   - bowtie2=2.5.1
-  - bedtools=2.31.0  # 提供bamToBed, genomeCoverageBed, intersectBed等
+  - bedtools=2.31.0 
   - ucsc-bedgraphtobigwig=377
   - ucsc-bedsort=377
   - ucsc-bedclip=377
   - ucsc-bedtobigbed=377
   - ucsc-bigwigsummary=377
   - ucsc-bigwigaverageoverbed=377
-  - macs2  # 替代macs14
-  - meme      # 提供meme-chip
-  - rmats=4.1.2      # 提供rmats2sashimiplot
+  - meme  
+  - rmats=4.1.2  
   - rmats2sashimiplot
   - velocyto.py
   - igv
