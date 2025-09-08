@@ -1,5 +1,5 @@
 # CDesk
-CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. For detailed usage, you can see our [hicConvertFormat](/doc/html/Introduction.html).
+CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. For detailed usage, you can see our [guideline handbook](/doc/html/Introduction.html).
 
 ## Install
 ### 1. Donwload the scripts
