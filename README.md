@@ -1,21 +1,26 @@
-# CDesk {ignore}
-[TOC]
+# CDesk
+CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. For detailed usage, you can see our [hicConvertFormat](/doc/html/Introduction.html).
+
 ## Install
 ### 1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
-### 2. Prepare the conda environments
+### 2. Prepare the Conda Environments
 ```
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
 mamba env create -f CDesk_py2.7.yml
 mamba env create -f CDesk_R.yml
 ```
-We prepare the conda environments for the softwares, R and python environment needed in the scripts (some require additional manual installation). We recommend you use mamba instead of conda to install or the environment process might be too long. Every time running the CDesk, it would first search whether there are CDesk conda or mamba environments. You can also set the env path in the configuration file, it would search the path in the configuration file if there is no CDesk conda env. If no environment detected, it would use your own environment.
+We provide Conda environments containing the required software, R, and Python dependencies used in the scripts (some tools may require additional manual installation). We recommend using mamba instead of conda for faster environment setup.
 
-### 3. Prepare the data and write the configuration file
-You need to prepare the data of different species and write the path in the config.json configuration file that stores the data path and additional softwares path. Below is an example, you can customize your configuration file, prepare for other species, for example. Not all is necessary, it depends on the function you run, it would exit and reports error if you don't have necessary data or software for the specific task.
+Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
+
+### 3. Prepare the Data and Write the Configuration File
+You need to prepare reference data for the species of interest and specify the corresponding file paths in the config.json configuration file. This file stores paths to genomic data, annotation files, and any additional software installations.
+
+An example configuration is provided below. You can customize it to support additional species or data types. Note that not all fields are required — the specific data and tools needed depend on the task you intend to run. CDesk will check for required resources and exit with an informative error message if any are missing.
 ```
 {
   "software":{
