@@ -1,4 +1,4 @@
-# CDesk_env.yaml
+# CDesk_py3.7.yml
 name: CDesk_py3.7
 channels:
   - conda-forge
