@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 '''
 Check reads distribution over exon, intron, UTR, intergenic ... etc
 The following reads will be skipped:

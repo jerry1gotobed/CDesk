@@ -1,0 +1,12 @@
+# CDesk_env.yaml
+name: CDesk_py2.7
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=2.7
+  - bioconda::macs
+  - pip:
+    - numpy
+    - scipy

@@ -1,0 +1,20 @@
+# CDesk_env.yaml
+name: CDesk_py3.7
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - hicexplorer
+  - pairtools
+  - bwa
+  - cython
+  - pip:
+    - chardet
+    - pyscenic
+    - scanpy
+    - fanc
+    - cooltools
+    - matplotlib_venn 

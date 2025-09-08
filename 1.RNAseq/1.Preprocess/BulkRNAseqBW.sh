@@ -1,10 +1,4 @@
-#!/bin/bash
-
-# Description : generate BW
-# Author      : WEI SHI
-# Version     : 1.0
-# Time        : 2024-10-20 12:01:00
-
+#!/usr/bin/env bash
 show_help() {
     echo "Usage: bash BulkRNAseqBW.sh [OPTIONS]"
     echo "Options:"
@@ -14,15 +8,22 @@ show_help() {
     echo "  -p INT		Specify number of threads (default is 8)"
 }
 
-config_json=${!#}
+config_json=$CDesk_config
 THREAD=8
-BAMCOVERAGE=$(jq -r '.software.bamCoverage' $config_json)
-for tool in "$BAMCOVERAGE"; do
-    if [ ! -x "$tool" ]; then
-        echo "Error: Tool not found or not executable: $tool"
-        exit 1
+
+tools=("bamCoverage")
+missing_tools=()
+echo "Checking required tools..."
+for tool in "${tools[@]}"; do
+    if ! command -v "$tool" &>/dev/null; then
+        missing_tools+=("$tool")
     fi
 done
+if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "Error: The following required tools are not installed or not in PATH:" >&2
+    printf ' - %s\n' "${missing_tools[@]}" >&2
+    exit 1
+fi
 
 while getopts ":hi:o:p:" opt; do
     case ${opt} in
@@ -52,7 +53,7 @@ while getopts ":hi:o:p:" opt; do
     esac
 done
 
-# 检查是否提供了必要的参数
+# Parameters check
 if [ -z "$INPUT_DIRECTORY" ] || [ -z "$OUTPUT_DIRECTORY" ]; then
     echo "Error: INPUT_DIRECTORY and OUTPUT_DIRECTORY must be provided."
     show_help
@@ -71,11 +72,11 @@ counter=0
 for FILE in ${INPUT_DIRECTORY}/*.bam; do
     ((counter++))
 
-    echo "这是第 ${counter} 个样本~~~~~~~~~"
+    echo "Number ${counter} sample~~~~~~~~~"
     echo "----------------------------- Start generating BW files for ${FILE} ---------------------------"
     echo "128 `get_time` bamCoverage ..."
 
     SAMPLE=$(basename ${FILE} .bam)
-    $BAMCOVERAGE -p ${THREAD} -b ${FILE} -o ${OUTPUT_DIRECTORY}/${SAMPLE}.bw
+    bamCoverage -p ${THREAD} -b ${FILE} -o ${OUTPUT_DIRECTORY}/${SAMPLE}.bw
 done
 

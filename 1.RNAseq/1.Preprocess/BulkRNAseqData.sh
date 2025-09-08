@@ -1,48 +1,38 @@
-#!/bin/bash
-
-# Description : Preprocessing+Mapping+QC
-# Author      : WEI SHI, Lin Zejie
-# Version     : 1.0
-# Time        : 2024-10-19 22:40:00
-
-config_json=${!#}
+#!/usr/bin/env bash
+config_json=$CDesk_config
 SCRIPT_DIR=$(dirname $(realpath $0))
 
 show_help() {
     echo "Usage: BulkRNAseqData.sh [OPTIONS]"
     echo "Options:"
     echo "  -h, --help		Show this help message"
-    echo "  -s SPECIES		Specify the species (mm9, mm10)"
+    echo "  -s SPECIES		Specify the species"
     echo "  -i INPUT_DIRECTORY	Specify the absolute directory of input file (fastq.gz), the ending does not require a '/'"
     echo "  -o OUTPUT_DIRECTORY	Specify the absolute directory of output file, the ending does not require a '/'"
     echo "  -p INT		Specify number of threads (default is 8)"
     echo "  -l 1 or 2		1:Single sequencing, 2:Pair sequencing (default is 2)"
 }
 
-# 检查是否安装了 `jq`（用于解析 JSON）
-if ! command -v jq &> /dev/null; then
-    echo "Error: 'jq' is required but not installed. Please install it first."
-    exit 1
-fi
-
-# 检查软件是否存在
-HISAT2=$(jq -r '.software.hisat2' $config_json)
-STRINGTIE=$(jq -r '.software.stringtie' $config_json)
-SAMTOOLS=$(jq -r '.software.samtools' $config_json)
-TRIM_GALORE=$(jq -r '.software.trim_galore' $config_json)
-FASTQC=$(jq -r '.software.fastqc' $config_json)
-MULTIQC=$(jq -r '.software.multiqc' $config_json)
-
-for tool in "$HISAT2" "$STRINGTIE" "$SAMTOOLS" "$TRIM_GALORE" "$FASTQC" "$MULTIQC"; do
-    if [ ! -x "$tool" ]; then
-        echo "Error: Tool not found or not executable: $tool"
-        exit 1
+# Check whether the tools are available
+# Software required
+tools=("jq" "hisat2" "stringtie" "samtools" "trim_galore" "fastqc" "multiqc" "gfold")
+missing_tools=()
+echo "Checking required tools..."
+for tool in "${tools[@]}"; do
+    if ! command -v "$tool" &>/dev/null; then
+        missing_tools+=("$tool")
     fi
 done
+if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "Error: The following required tools are not installed or not in PATH:" >&2
+    printf ' - %s\n' "${missing_tools[@]}" >&2
+    exit 1
+else
+    echo "All required tools are available."
+fi
 
 THREAD=8
 LAYOUT=2
-ALLOWED_SPECIES=("mm10" "hg38" "rn7" "susScr11" "galGal6")
 
 while getopts ":hs:i:o:p:l:" opt; do
     case ${opt} in
@@ -55,10 +45,6 @@ while getopts ":hs:i:o:p:l:" opt; do
             ;;
         s )
             SPECIES=${OPTARG}
-	    if [[ ! " ${ALLOWED_SPECIES[@]} " =~ " ${SPECIES} " ]]; then
-                echo "Error: Invalid species '${SPECIES}'. Allowed species are: ${ALLOWED_SPECIES[*]}"
-                exit 1
-            fi
             ;;
         o)
             OUTPUT_DIRECTORY=${OPTARG}
@@ -87,7 +73,7 @@ while getopts ":hs:i:o:p:l:" opt; do
     esac
 done
 
-# 检查是否提供了必要的参数
+# Parameters check
 if [ -z "$INPUT_DIRECTORY" ] || [ -z "$SPECIES" ] || [ -z "$OUTPUT_DIRECTORY" ]; then
     echo "Error: INPUT_DIRECTORY, OUTPUT_DIRECTORY and SPECIES must be provided."
     show_helpTRIM_GALORE=$
@@ -100,12 +86,12 @@ if [ -z "$CONFIG" ]; then
     exit 1
 fi
 
-# 分配参考数据
+# Assign the reference data
 mapping_index=$(echo "$CONFIG" | jq -r '.mapping_index')
 mapping_gtf=$(echo "$CONFIG" | jq -r '.refseq_gtf')
 gfold_gtf=$(echo "$CONFIG" | jq -r '.refseq_gtf') 
 RSeQC_bed=$(echo "$CONFIG" | jq -r '.refseq_bed')
-# 检查变量是否为空
+# variables check
 if [ -z "$mapping_index" ]; then
     echo "Error: 'mapping_index' is not set or empty in the CONFIG."
     exit 1
@@ -122,29 +108,24 @@ if [ -z "$RSeQC_bed" ]; then
     echo "Error: 'refseq_bed' is not set or empty in the CONFIG."
     exit 1
 fi
-# 检查文件是否存在
-# 索引目录进行检查
+
 if ! ls "${mapping_index}"*.ht2 1> /dev/null 2>&1; then
   echo "HISAT2 index files are missing. Please check the index path."
 fi
-# 检查剩余文件是否存在
 if [ ! -f "$mapping_gtf" ]; then
     echo "Error: File '$mapping_gtf' does not exist."
     exit 1
 fi
-
 if [ ! -f "$gfold_gtf" ]; then
     echo "Error: File '$gfold_gtf' does not exist."
     exit 1
 fi
-
 if [ ! -f "$RSeQC_bed" ]; then
     echo "Error: File '$RSeQC_bed' does not exist."
     exit 1
 fi
 
-
-# 提取文件名
+# Grab the fq files name
 if [ "$LAYOUT" = "1" ]; then
     file_elist=$(ls "$INPUT_DIRECTORY"/*.fastq.gz 2>/dev/null | sed 's/.fastq.gz//' | sort -u)
     fqlist=$(ls "$INPUT_DIRECTORY"/*.fq.gz 2>/dev/null | sed 's/.fq.gz//' | sort -u)
@@ -155,12 +136,10 @@ elif [ "$LAYOUT" = "2" ]; then
     file_list=$(echo "$file_elist $fqlist" | tr ' ' '\n' | sort -u)
 fi
 
-
 log_path="${OUTPUT_DIRECTORY}/Log"
 bam_path="${OUTPUT_DIRECTORY}/Bam"
 QC_path="${OUTPUT_DIRECTORY}/QC"
 Expression_path="${OUTPUT_DIRECTORY}/Expression"
-
 
 if [ ! -d "${OUTPUT_DIRECTORY}" ]; then
     mkdir -p ${OUTPUT_DIRECTORY}
@@ -186,43 +165,46 @@ get_time(){
 ####################################################################################################
 #################################          ANALYSIS STEPS           ################################
 ####################################################################################################
-echo "检查是否有存在的bam文件"
+echo "Check available bam files"
 
 find "$INPUT_DIRECTORY" -maxdepth 1 -name "*.bam" -exec sh -c '
     bam_file="$1"
     bam_dir="$2"
     sample=$(basename "$bam_file" .bam)
     target="${bam_dir}/${sample}.bam"
-    
-    # 如果目标文件不存在，创建硬链接
+
     if [ ! -e "$target" ]; then
-        ln "$bam_file" "$target"
-	echo "检查到Bam文件"
-        echo "Linked input BAM: $bam_file -> $target"
-        
-        # 快速检查
-        if ! samtools quickcheck -q "$target"; then
-            echo "BAM文件校验失败，可能需要重新处理: $target"
+        if ln "$bam_file" "$target" 2>/dev/null; then
+            echo "Linked $bam_file -> $target"
+        else
+            cp "$bam_file" "$target"
+            echo "Copy $bam_file -> $target"
+        fi
+
+        # Check
+        if ! "$3" quickcheck -q "$target"; then
+            echo "BAM file checking error, might have to process: $target"
             rm "$target"
         fi
     fi
-' sh {} "$bam_path" \;
+' sh {} "$bam_path" "samtools" \;
 
-echo "---------------------------------------处理fq文件-----------------------------------------------------"
+echo "---------------------------------------Process fq files-----------------------------------------------------"
 counter=0
 
 for FILE in $file_list; do
     counter=$((counter + 1))
     SAMPLE_PREFIX=$(basename ${FILE})
     BAM_FILE="${bam_path}/${SAMPLE_PREFIX}.bam"
-    echo "----------------------------第 ${counter} 个fq样本，样本名为 ${SAMPLE_PREFIX}--------------------------"
+    echo " "
+    echo "----------------------------Number ${counter} fq sample: ${SAMPLE_PREFIX}--------------------------"
     echo "-----------------------------------------------------------------------------------------------------"
 
     if [ -f "$BAM_FILE" ]; then
-        echo "检测到现有BAM文件，跳过比对"
+        echo "Available BAM file checked，skip mapping"
         SKIP_MAPPING=true
     else
-        echo "未检测到现有BAM文件，进行比对"
+        echo "No available BAM file checked，do mapping"
         SKIP_MAPPING=false
     fi
 
@@ -231,7 +213,7 @@ for FILE in $file_list; do
     R2_FILE_NAME=""
 
     if [ "${LAYOUT}" == "1" ]; then
-        # 检查是否存在对应的SE文件
+        # Check according fq file
         if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
             if [ -e "${FILE}.fastq.gz" ]; then
                 FILE_NAME="${FILE}.fastq.gz"
@@ -239,11 +221,11 @@ for FILE in $file_list; do
                 FILE_NAME="${FILE}.fq.gz"
             fi
         else
-            echo "错误：未找到样本 ${SAMPLE_REFIX} 的SE文件。跳过此样本。"
+            echo "Error：Can not find ${SAMPLE_REFIX} sample fq fiile, skip"
             continue
         fi
     elif [ "${LAYOUT}" == "2" ]; then
-        # 检查是否存在对应的PE文件
+        # Check according fq file
         if [ -e "${FILE}_1.fastq.gz" ] && [ -e "${FILE}_2.fastq.gz" ]; then
             R1_FILE_NAME="${FILE}_1.fastq.gz"
             R2_FILE_NAME="${FILE}_2.fastq.gz"
@@ -253,9 +235,18 @@ for FILE in $file_list; do
             R2_FILE_NAME="${FILE}_2.fq.gz"
 	    FILE_TYPE="fq"
         else
-            echo "错误：未找到样本 ${SAMPLE_REFIX} 的PE文件。跳过此样本。"
+            echo "Error: Can not find ${SAMPLE_REFIX} 2 fq files, skip"
             continue
         fi
+    fi
+
+    echo " "
+    echo "120 `get_time` fastqc ..."
+    echo " "
+    if [[ "${FILE_TYPE}" == "fastq" ]]; then
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz
+    elif [[ "${FILE_TYPE}" == "fq" ]]; then
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz
     fi
 
     if [ "$SKIP_MAPPING" = false ]; then
@@ -300,85 +291,76 @@ for FILE in $file_list; do
         if [ "${LAYOUT}" == "1" ]; then
             echo "67 `get_time` trim_galore ..."
             echo " "
-        $TRIM_GALORE --gzip -j ${THREAD} ${FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
+        trim_galore --gzip -j ${THREAD} ${FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
         elif [ "${LAYOUT}" == "2" ]; then
             echo "86 `get_time` trim_galore ..."
             echo " "
-        $TRIM_GALORE --gzip -j ${THREAD} --paired ${R1_FILE_NAME} ${R2_FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
+        trim_galore --gzip -j ${THREAD} --paired ${R1_FILE_NAME} ${R2_FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
         fi
 
 
         if [ "${LAYOUT}" == "1" ]; then
             echo "70 `get_time` hisat2 ..."
             echo " "
-        $HISAT2 -p ${THREAD} --dta -x ${mapping_index} -U ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1 
+        hisat2 -p ${THREAD} --dta -x ${mapping_index} -U ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1 
             rm -rf ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz
         elif [ "${LAYOUT}" == "2" ]; then
             echo "91 `get_time` hisat2 ..."
             echo " "
-        $HISAT2 -p ${THREAD} --dta -x ${mapping_index} -1 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_1.fq.gz -2 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_2.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1
+        hisat2 -p ${THREAD} --dta -x ${mapping_index} -1 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_1.fq.gz -2 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_2.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1
             rm -rf ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_1.fq.gz ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_2.fq.gz
         fi
 
         echo "74 & 95 `get_time` samtools view ..."
         echo " "
-        $SAMTOOLS view -@ ${THREAD} -bS ${bam_path}/${SAMPLE_PREFIX}.align.sam > ${bam_path}/${SAMPLE_PREFIX}.bam
+        samtools view -@ ${THREAD} -bS ${bam_path}/${SAMPLE_PREFIX}.align.sam > ${bam_path}/${SAMPLE_PREFIX}.bam
+	rm ${bam_path}/${SAMPLE_PREFIX}.align.sam
 
-        # echo "77 & 98 `get_time` samtools sort ..."
-        # echo " "
-        # $SAMTOOLS sort -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam > ${bam_path}/${SAMPLE_PREFIX}.Sorted.bam
-        # rm -rf ${bam_path}/${SAMPLE_PREFIX}.align.sam ${bam_path}/${SAMPLE_PREFIX}.bam
-        # mv ${bam_path}/${SAMPLE_PREFIX}.Sorted.bam ${bam_path}/${SAMPLE_PREFIX}.bam
-
-        # echo "112 `get_time` samtools index ..."
-        # echo " "
-        # $SAMTOOLS index -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam
     else
-        echo "使用现有BAM文件: $BAM_FILE"
+        echo "Use available BAM: $BAM_FILE"
     fi
 
-    echo " "
-    echo "120 `get_time` fastqc ..."
-    echo " "
-    if [[ "${FILE_TYPE}" == "fastq" ]]; then
-        $FASTQC -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz
-    elif [[ "${FILE_TYPE}" == "fq" ]]; then
-        $FASTQC -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz
-    fi
 done
-$MULTIQC $QC_path --outdir $QC_path
+multiqc $QC_path --outdir $QC_path
 
-echo "---------------------------------------处理bam文件----------------------------------------------------"
+echo "---------------------------------------Process bam file----------------------------------------------------"
 file_list=$(ls "$bam_path"/*.bam 2>/dev/null | sort -u)
 for FILE in $file_list; do
     SAMPLE_PREFIX=$(basename "$FILE" | cut -d '.' -f 1)
-    echo "处理 ${FILE} 文件"
+    echo "Process ${FILE}"
     
-    # 检查排序状态
+    # Check sort status
     if ! samtools view -H "${bam_path}/${SAMPLE_PREFIX}.bam" | grep -q "SO:coordinate"; then
-        echo "重新排序BAM文件..."
+        echo "Sort BAM..."
         tmp_sorted=$(mktemp)
-        $SAMTOOLS sort -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
+        samtools sort -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
         mv "$tmp_sorted" "${bam_path}/${SAMPLE_PREFIX}.bam"
     else
-        echo "BAM文件已排序"
+        echo "BAM sorted"
     fi
 
-    # 检查是否需要建立索引
+    # Check index status
     if [ ! -f "${bam_path}/${SAMPLE_PREFIX}.bam.bai" ]; then
-        echo "创建BAM索引..."
-        $SAMTOOLS index -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam"
+        echo "BAM index..."
+        samtools index -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam"
     fi
+    
+    # 2.QC --------------------------------------------------------------------
+    echo "124 `get_time` RSeQC ..."
+    echo " "
+    python3.6 ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
 
-    # 2.Calculate gene expression levels --------------------------------------------------------------------
+    echo "---------------------------ANALYZING FINISHED-----------------------------"
+    echo " "
+
+    # 3.Calculate gene expression levels --------------------------------------------------------------------
     echo " "
     echo "2.Calculating gene expression levels ..."
     echo " "
     echo "116 `get_time` gfold count ..."
     echo " "
-    $SAMTOOLS view -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam | gfold count -ann ${gfold_gtf} -tag stdin -o ${Expression_path}/${SAMPLE_PREFIX}.read_cnt
-
-
+    samtools view -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam | gfold count -ann ${gfold_gtf} -tag stdin -o ${Expression_path}/${SAMPLE_PREFIX}.read_cnt > /dev/null 2>&1
+   
     if [ ! -d "${Expression_path}/Stringtie" ]; then
         mkdir -p ${Expression_path}/Stringtie
     fi
@@ -386,38 +368,28 @@ for FILE in $file_list; do
     
     echo "160 `get_time` stringtie count ..."
     echo " "
-    nohup $STRINGTIE ${bam_path}/${SAMPLE_PREFIX}.bam -p ${THREAD} -G ${mapping_gtf} -A ${Expression_path}/Stringtie/${SAMPLE_PREFIX}_gene_abund.tab > ${log_path}/${SAMPLE_PREFIX}.Stringtie.log 2>&1
-
-
-    # 3.QC --------------------------------------------------------------------
-    echo "124 `get_time` RSeQC ..."
-    echo " "
-    ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
-
-    echo "---------------------------ANALYZING FINISHED-----------------------------"
-    echo " "
+    nohup stringtie ${bam_path}/${SAMPLE_PREFIX}.bam -p ${THREAD} -G ${mapping_gtf} -A ${Expression_path}/Stringtie/${SAMPLE_PREFIX}_gene_abund.tab > ${log_path}/${SAMPLE_PREFIX}.Stringtie.log 2>&1
 
 done
 
 echo " "
 echo "begin merge fpkm expression..."
 echo " "
-# -------------------------------------------合并fpkm----------------------------------------------
-# 提取第一个.read_cnt文件的第一列并追加到CSV文件中
+# -------------------------------------------Merge fpkm----------------------------------------------
+# Gram the first column of the first .read_cnt to a csv file
 awk '{print $1}' $(ls ${Expression_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
 
-# 遍历所有的.read_cnt文件
+# Traverse all .read_cnt files
 for file in ${Expression_path}/*.read_cnt; do
     paste -d ',' ${Expression_path}/output1.csv <(awk '{print $5}' "$file") > ${Expression_path}/temp1.csv
     mv ${Expression_path}/temp1.csv ${Expression_path}/output1.csv
 done
 
-# 加表头
+# Add header
 echo "gene_name,$(ls ${Expression_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
-
-# 将原始数据追加到临时文件中
 cat ${Expression_path}/output1.csv >> ${Expression_path}/temp1.csv
-# 用临时文件替换原始文件
+
+# Get merged_fpkm
 mv ${Expression_path}/temp1.csv ${Expression_path}/merged_fpkm.csv
 
 rm -rf ${Expression_path}/output1.csv
@@ -428,25 +400,24 @@ echo " "
 echo " "
 echo "begin merge counts expression..."
 echo " "
-# -------------------------------------------合并count----------------------------------------------
-# 提取第一个.read_cnt文件的第一列并追加到CSV文件中
+# -------------------------------------------Merge count----------------------------------------------
+# Gram the first column of the first .read_cnt to a csv file
 awk '{print $1}' $(ls ${Expression_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
 
-# 遍历所有的.read_cnt文件
+# Traverse all .read_cnt files
 for file in ${Expression_path}/*.read_cnt; do
     paste -d ',' ${Expression_path}/output1.csv <(awk '{print $3}' "$file") > ${Expression_path}/temp1.csv
     mv ${Expression_path}/temp1.csv ${Expression_path}/output1.csv
 done
 
+# Add header
 echo "gene_name,$(ls ${Expression_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
-
-# 将原始数据追加到临时文件中
 cat ${Expression_path}/output1.csv >> ${Expression_path}/temp1.csv
-# 用临时文件替换原始文件
+
+# Get merged_count
 mv ${Expression_path}/temp1.csv ${Expression_path}/merged_count.csv
 
 rm -rf ${Expression_path}/output1.csv
 echo " "
 echo "counts expression has been merged..."
-echo "运行完成"
-
+echo "Preprocess Done"

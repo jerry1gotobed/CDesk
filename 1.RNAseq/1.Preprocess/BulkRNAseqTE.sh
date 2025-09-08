@@ -1,10 +1,4 @@
-#!/bin/bash
-
-# Description : generate TE
-# Author      : WEI SHI
-# Version     : 1.0
-# Time        : 2024-10-20 12:28:00
-
+#!/usr/bin/env bash
 show_help() {
     echo "Usage: bash BulkRNAseqTE.sh [OPTIONS]"
     echo "Options:"
@@ -16,18 +10,23 @@ show_help() {
     echo "  -t TE_NAME_FILE     Specify the path to TE name reference file (optional)"
 }
 
-config_json=${!#}
+config_json=$CDesk_config
 THREAD=8
 SCRIPT_DIR=$(dirname $(realpath $0))
-ALLOWED_SPECIES=("mm10" "hg38" "rn7" "susScr11" "galGal6")
 
-SCTE=$(jq -r '.software.scTE' $config_json)
-for tool in "$SCTE"; do
-    if [ ! -x "$tool" ]; then
-        echo "Error: Tool not found or not executable: $tool"
-        exit 1
+tools=("scTE")
+missing_tools=()
+echo "Checking required tools..."
+for tool in "${tools[@]}"; do
+    if ! command -v "$tool" &>/dev/null; then
+        missing_tools+=("$tool")
     fi
 done
+if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "Error: The following required tools are not installed or not in PATH:" >&2
+    printf ' - %s\n' "${missing_tools[@]}" >&2
+    exit 1
+fi
 
 while getopts ":hi:s:o:t:p:" opt; do
     case ${opt} in
@@ -46,10 +45,6 @@ while getopts ":hi:s:o:t:p:" opt; do
             ;;
 	s )
             SPECIES=${OPTARG}
-	    if [[ ! " ${ALLOWED_SPECIES[@]} " =~ " ${SPECIES} " ]]; then
-                echo "Error: Invalid species '${SPECIES}'. Allowed species are: ${ALLOWED_SPECIES[*]}"
-                exit 1
-            fi
             ;;
 	t )
             TE_NAME_FILE=$(realpath "${OPTARG}")
@@ -67,7 +62,7 @@ while getopts ":hi:s:o:t:p:" opt; do
     esac
 done
 
-# 检查是否提供了必要的参数
+# Check parameters
 if [ -z "$INPUT_DIRECTORY" ] || [ -z "$OUTPUT_DIRECTORY" ]; then
     echo "Error: INPUT_DIRECTORY and OUTPUT_DIRECTORY must be provided."
     show_help
@@ -93,49 +88,46 @@ get_time(){
     printf "%-19s" "`date +\"%Y-%m-%d %H:%M:%S\"`"
 }
 
-echo "---------------------------------- 参考数据使用 ${REF_IDX} --------------------------------"
+echo "---------------------------------- Reference data ${REF_IDX} --------------------------------"
 
 counter=0
 for FILE in ${INPUT_DIRECTORY}/*.bam; do
     ((counter++))
-    echo "----------------------------- 这是第 ${counter} 个样本~~~~~~~ ---------------------------"
+    echo "----------------------------- Number ${counter} sample~~~~~~~ ---------------------------"
 
     echo "132 `get_time` scTE ..."
 
     cd ${OUTPUT_DIRECTORY}
     SAMPLE=$(basename ${FILE} .bam)
-    $SCTE -i ${FILE} -o ${SAMPLE} -p ${THREAD} -x ${REF_IDX} --hdf5 False -CB False -UMI False
+    scTE -i ${FILE} -o ${SAMPLE} -p ${THREAD} -x ${REF_IDX} --hdf5 False -CB False -UMI False
     cd -
 done
 
-echo "--------------------------开始合并scTE结果-------------------------------"
-# 合并所有scTE结果
+echo "--------------------------Merge scTE result-------------------------------"
 mkdir ${OUTPUT_DIRECTORY}/merge
 
-# 获取第一个csv文件名
+# The first csv
 first_file=$(ls ${OUTPUT_DIRECTORY}/*.csv | head -n 1)
-# 复制第一个文件
 cp "$first_file" ${OUTPUT_DIRECTORY}/merge/combined.csv
 
-# 循环处理其余csv文件
+# Traverse remaining csv files
 for file in ${OUTPUT_DIRECTORY}/*.csv; do
   if [ "$file" != "$first_file" ]; then
     sed -n '2p' "$file" >> ${OUTPUT_DIRECTORY}/merge/combined.csv
   fi
 done
 
-# 转置
-python ${SCRIPT_DIR}/transpose_csv.py ${OUTPUT_DIRECTORY}/merge/combined.csv ${OUTPUT_DIRECTORY}/merged_scTE.csv
+# Transpose
+python3.7 ${SCRIPT_DIR}/transpose_csv.py ${OUTPUT_DIRECTORY}/merge/combined.csv ${OUTPUT_DIRECTORY}/merged_scTE.csv
 rm -rf ${OUTPUT_DIRECTORY}/merge
 
 # select TE data
 if [ -n "${TE_NAME_FILE}" ] && [ -f "${TE_NAME_FILE}" ]; then
-  head -n 1 ${OUTPUT_DIRECTORY}/merged_scTE.csv >> ${OUTPUT_DIRECTORY}/TE_data.csv
+  head -n 1 ${OUTPUT_DIRECTORY}/merged_scTE.csv >> ${OUTPUT_DIRECTORY}/TE_tem.csv
   awk -F ',' 'NR==FNR {te[$1]; next} $1 in te' "${TE_NAME_FILE}" ${OUTPUT_DIRECTORY}/merged_scTE.csv > ${OUTPUT_DIRECTORY}/TE_tem.csv
   cat ${OUTPUT_DIRECTORY}/TE_tem.csv >> ${OUTPUT_DIRECTORY}/TE_filter.csv
   rm -rf ${OUTPUT_DIRECTORY}/TE_tem.csv
 fi
 
 
-echo "--------------------------合并完成，可以查看结果了--------------------------"
-
+echo "--------------------------scTE done--------------------------"
