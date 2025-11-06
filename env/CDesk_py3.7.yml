@@ -1,4 +1,4 @@
-# CDesk_py3.7.yml
+# CDesk_env.yaml
 name: CDesk_py3.7
 channels:
   - conda-forge
@@ -17,4 +17,8 @@ dependencies:
     - scanpy
     - fanc
     - cooltools
-    - matplotlib_venn 
+    - matplotlib_venn
+    - chardet
+    - pyBigWig
+    - leidenalg
+    - scvelo 

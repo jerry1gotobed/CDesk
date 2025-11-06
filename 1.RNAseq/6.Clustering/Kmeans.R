@@ -57,7 +57,7 @@ gene_expression_clustering <- function(count_file, meta_file, output_dir, k,
   selected_columns <- count_data[, c(sample_ids)]
   if (gene_list != 'no'){
     gene_list <- readLines(gene_list)
-    selected_columns <- count_data[gene_list[gene_list %in% row.names(selected_columns)], ]
+    selected_columns <- selected_columns[gene_list[gene_list %in% row.names(selected_columns)], ]
   }
 
   # Log2 transformation of expression data
@@ -105,7 +105,7 @@ gene_expression_clustering <- function(count_file, meta_file, output_dir, k,
     v3 <- v1 + sd / sqrt(n) * qt(1 - alpha / 2, n - 1)
     par(mar = c(20, 4, 2, 2))
     plot(v1, lwd = 3, type = "l", col = clusterCol[each_i], ylim = c(min(v2), max(v3)),
-         xlab = NA, ylab = "Log2(Count+1)", xaxt = "n",
+         xlab = NA, ylab = "Log2(expression+1)", xaxt = "n",
          main = paste("C", each, "(n=", length(modGenes), ")", sep = ""))
     box(lwd = 2)
     axis(side = 1, 1:length(all_path), all_path, las = 2)
@@ -184,6 +184,7 @@ cat("Number of clusters (k):", k, "\n")
 cat("Figure height:", figure_height, "\n")
 cat("Figure width:", figure_width, "\n")
 cat("Clustering method:", method, "\n")
+cat("Gene list:", gene_list, "\n")
 cat("=====================================================\n\n")
 
 # Run the clustering function
@@ -193,7 +194,9 @@ results <- gene_expression_clustering(
   output_dir = output_dir,
   k = k,
   figure_height = figure_height,
-  method = method
+  figure_width = figure_width,
+  method = method,
+  gene_list = gene_list
 )
 
 # Print results summary

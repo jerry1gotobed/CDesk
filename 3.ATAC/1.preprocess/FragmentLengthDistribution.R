@@ -29,5 +29,4 @@ part <- sum(y[part_index])
 ratio <- round(part/total*100,2)
 text(x=50,y=max(y)*1.1,paste(ratio,"%",sep=""),col=cccol[2])
 # text(x=50,y=max(data[,2])*1.1,paste(ratio,"%\n(",part,")",sep=""),col=cccol[2])
-dev.off()
-
+while (!is.null(dev.list()))  dev.off()

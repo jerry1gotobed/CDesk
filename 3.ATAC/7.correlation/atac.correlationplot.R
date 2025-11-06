@@ -4,14 +4,12 @@
 args <- commandArgs(trailingOnly = TRUE)
 
 # 检查参数数量
-if (length(args) != 2) {
-  stop("Usage: Rscript script.R <input_file> <R_lib>")
+if (length(args) != 1) {
+  stop("Usage: Rscript script.R <input_file>")
 }
 
 # 读取输入文件
 input_file <- args[1]
-R_Lib <- args[2]
-.libPaths(c(.libPaths(),R_Lib))
 
 suppressMessages(library(ggplot2),classes = c("message","warning"))
 suppressMessages(library(dplyr),classes = c("message","warning"))

@@ -2,10 +2,13 @@
 suppressMessages(library(Seurat))
 suppressMessages(library(dplyr))
 suppressMessages(library(optparse))
+suppressMessages(library(ggplot2))
 
 # 定义解析命令行参数的函数
-option_list <- list(
-		      make_option(c("-i", "--input"), type = "character", help = "Input Seurat object file (.rds or .Rdata)", metavar = "character"),
+option_list <- list( 
+		    make_option("--width", type = "character", help = "Plot width", metavar = "character"),
+		    make_option("--height", type = "character", help = "Plot height", metavar = "character"),
+		    make_option(c("-i", "--input"), type = "character", help = "Input Seurat object file (.rds or .Rdata)", metavar = "character"),
 		      make_option(c("-g", "--group"), type = "character", help = "Specify the identity for comparison", metavar = "character"),
 		        make_option(c("-t", "--cell_type_1"), type = "character", help = "First cell type for comparison", metavar = "character"),
 		        make_option(c("-e", "--cell_type_2"), type = "character", help = "Second cell type for comparison", metavar = "character"),
@@ -23,7 +26,8 @@ opt <- parse_args(opt_parser)
 seurat_obj_path <- opt$input
 scRNA <- readRDS(seurat_obj_path)
 Group = opt$group
-
+width = as.numeric(opt$width)
+height = as.numeric(opt$height)
 output_dir = opt$output
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)  # 使用recursive = TRUE来确保创建多级目录
@@ -48,10 +52,45 @@ mfb.markers <- FindMarkers(object = scRNA,
 										                            ident.2 = ident.2)
 
 # 筛选显著的 marker genes
-sig.markers <- mfb.markers[(as.numeric(as.vector(mfb.markers$avg_log2FC)) > opt$logFCfilter & 
+sig.markers <- mfb.markers[(abs(as.numeric(as.vector(mfb.markers$avg_log2FC))) > opt$logFCfilter & 
 			                                as.numeric(as.vector(mfb.markers$p_val_adj)) < opt$adjPvalFilter),]
 
+# 提取前10个上调和下调基因
+top_up <- sig.markers %>% 
+  filter(avg_log2FC > 0) %>% 
+  arrange(desc(avg_log2FC)) %>% 
+  head(10)
+
+top_down <- sig.markers %>% 
+  filter(avg_log2FC < 0) %>% 
+  arrange(avg_log2FC) %>% 
+  head(10)
+
+top_genes <- rbind(top_up, top_down)
+
+# 绘制热图
+if(nrow(top_genes) > 0) {
+	#cells_to_plot <- c(ident.1, ident.2)
+	#subset_data <- subset(scRNA, cells = cells_to_plot)
+	#subset_data <- subset_data[, Idents(subset_data) %in% c(opt$cell_type_1, opt$cell_type_2)]
+	# 设置细胞身份为比较组，并筛选只保留两个组
+	#Idents(subset_data) <- Group
+	subset_data <- subset(scRNA, idents = c(opt$cell_type_1, opt$cell_type_2))  # 添加这行来筛选
+
+	# 绘制热图
+	heatmap_file <- paste0(output_dir, '/', opt$cell_type_1, '_vs_', opt$cell_type_2, '_heatmap.pdf')
+	pdf(file = heatmap_file, width = width, height = height)
+	print(DoHeatmap(object = subset_data,
+	                features = rownames(top_genes),
+	                group.by = "ident",  # 使用ident而不是Group
+	                label = TRUE) +
+	        scale_fill_gradientn(colors = c("#BEBEBE", "#F5F5F5", "#CD2626")))
+	dev.off()
+  
+  cat("Heatmap has been saved to", heatmap_file, "\n")
+}
+
 # 保存显著的 marker genes
-write.table(sig.markers, file = paste0(output_dir,'/',opt$cell_type_1,'_vs_',opt$cell_type_2,'.csv'), sep = ",", row.names = TRUE, quote = FALSE)
+write.csv(sig.markers, file = paste0(output_dir,'/',opt$cell_type_1,'_vs_',opt$cell_type_2,'.csv'),row.names = TRUE, quote = FALSE)
 
 cat("Significant markers have been saved to", opt$output, "\n")

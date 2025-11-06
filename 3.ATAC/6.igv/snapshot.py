@@ -14,7 +14,6 @@ def parse_arguments():
     parser.add_argument("--display_mode",default='collapse',help="Display mode", choices=["collapse","expand","squish"])
     parser.add_argument("--region",required=True,help="The region file")
     parser.add_argument("--type", default='png', type=str,choices=['svg','png'] ,help="svg or png output")
-    parser.add_argument("config_path", help="Path to configuration file")
     return parser.parse_args()
 
 def main():
@@ -60,10 +59,6 @@ def main():
     igv_script += """
     exit
     """
-
-    with open(args.config_path, "r") as f:
-        config = json.load(f)
-    igv_path = os.path.join(config['software']['igv'],'igv.sh')
     
     script_file = os.path.join(f'{args.o}/igv_batch_script.txt')
     try:
@@ -74,7 +69,7 @@ def main():
         return
 
     igv_cmd = [
-        igv_path,
+        'igv',
         "-b", script_file
     ]
 

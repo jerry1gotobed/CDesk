@@ -16,6 +16,10 @@ for tool in tools:
         sys.exit(1)
 
 config_path = os.environ.get('CDesk_config')
+if os.environ.get('CDesk'):
+    python = os.path.join(os.environ.get('CDesk'),'python')
+else:
+    python = 'python'
 
 parser = argparse.ArgumentParser(description="CDesk bulkRNA rmats process")
 # Required parameters
@@ -49,7 +53,7 @@ with open(config_path, "r") as f:
         config = json.load(f)
 gtf = config['data'][species]['refseq_gtf']
 
-command = ['python3.6',os.path.join(os.environ.get('CDesk'),'rmats.py'),'--b1',b1,'--b2',b2,'--gtf',gtf,'-t',type,'--readLength',str(length),'--nthread',str(thread),'--od',output,'--tmp',tmp]
+command = [python,os.path.join(os.environ.get('CDesk'),'rmats.py'),'--b1',b1,'--b2',b2,'--gtf',gtf,'-t',type,'--readLength',str(length),'--nthread',str(thread),'--od',output,'--tmp',tmp]
 
 if variable_read_length == 'True':
     command = command + ['--variable-read-length']

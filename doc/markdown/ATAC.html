@@ -1,0 +1,575 @@
+<!DOCTYPE html><html><head>
+      <title>ATAC</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.19\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="cdesk-3-atac-pipeline">CDesk: 3. ATAC pipeline </h1>
+<p>Our CDesk ATAC module comprises of 7 function submodules. Here we present you the CDesk bulkRNA working pipeline and how to use it to analyze your bulkRNA data.<br>
+
+</p><div class="md-toc">
+<div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#31-atac-preprocess" class="md-toc-link">
+            <p>3.1 ATAC: Preprocess</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#32-atac-qc" class="md-toc-link">
+            <p>3.2 ATAC: QC</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#33-atac-dynamic" class="md-toc-link">
+            <p>3.3 ATAC: dynamic</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#34-atac-motif" class="md-toc-link">
+            <p>3.4 ATAC: motif</p>
+
+          </a></div>
+</div>
+<h2 id="31-atac-preprocess">3.1 ATAC: Preprocess </h2>
+<p>The CDesk ATAC preprocess pipeline is illustrated in the figure below. The input consists of a directory containing compressed FASTQ files in either paired-end format <u>(xxx_1.fastq.gz/xxx_1.fq.gz and xxx_2.fastq.gz/xxx_2.fq.gz)</u> or single-end format <u>(xxx.fastq.gz/xxx.fq.gz)</u>.</p>
+<p>The pipeline first checks whether a BAM file corresponding to each FASTQ sequencing file already exists. If so, the alignment step is skipped to save time. Next, each FASTQ file undergoes optional quality control using FastQC and MultiQC to assess key metrics such as base quality distribution, GC content, and adapter contamination. Following quality assessment, Trim Galore is applied to trim low-quality bases and remove adapter sequences, ensuring high accuracy in downstream analyses. Subsequently, Bowtie2 is used to align the cleaned reads to the reference genome, determining the genomic origin of each fragment. The resulting SAM files are then converted into sorted and indexed BAM files using Samtools. After format conversion, reads are filtered to remove low-quality and unaligned reads, followed by further format conversion to generate BED, BigWig, and BigBed files. Fragment length distribution is then analyzed and visualized. Peak calling is performed using MACS, and finally, signal intensity over promoter regions is computed for downstream interpretation.</p>
+<div align="center">
+<p><img src="./images/ATAC_preprocess.png" alt=""></p>
+</div>
+<center><i>CDesk ATAC preprocess pipeline</i></center><br>
+<p>Here is an example about how to use the CDesk ATAC preprocess module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC preprocess <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input_directory <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-t</span> <span class="token number">50</span> <span class="token parameter variable">-s</span> mm10 <span class="token punctuation">(</span>--group /<span class="token punctuation">..</span>./group.csv<span class="token punctuation">)</span>
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species*</td>
+<td>The species specified</td>
+<td></td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>The number of threads to use</td>
+<td>8</td>
+</tr>
+<tr>
+<td>-l</td>
+<td>1:Single sequencing, 2:Pair sequencing</td>
+<td>2</td>
+</tr>
+<tr>
+<td>--group</td>
+<td>The grouping file if you need to merge the replicates or rename files</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, you will see output similar to the figure shown below.</p>
+<ul>
+<li>Bam: Stores the intermediate sam and bam files.</li>
+<li>Bed: Stores the bed files (RawReads, fragment, sorted fragment) and bigbed files.</li>
+<li>BW: Stores the bw files.</li>
+<li>Log: Stores the log files of fastqc and multiqc, trim_galore, mapping and peak calling.</li>
+<li>QC: Stores the fastqc and multiqc result, chromosome distribution and length of fragments.</li>
+<li>Signal: Stores signal strength of promoter regions.</li>
+</ul>
+<div align="center">
+<img src="./images/ATAC_preprocess_result1.png" height="400"><img src="./images/ATAC_preprocess_result2.png" height="400">
+</div>
+<center><i>CDesk ATAC preprocess example result</i></center>
+<div align="center">
+<img src="./images/ATAC_preprocess_fragmentLength.png" height="400">
+</div>
+<center><i>CDesk ATAC preprocess fragment length example plot</i></center>
+<details>
+  <summary>A successful CDesk ATAC preprocess running process</summary>
+  <pre><blockcode>
+Checking required tools...
+All required tools are available.
+--------------------------------------------INITIALIZING----------------------------------------------
+ATAC-seq data analysis pipeline is now running...
+Number of threads ---------- 100
+Directory of data ---------- /mnt2/zhaochengchen/CDesk_TestData/ATACseq
+Directory of result ---------- /mnt/linzejie/CDesk_test/result/3.ATAC/1.preprocess/bam_fq1
+Mapping index ---------- /mnt/zhaochengchen/Data/mm10/mm10
+ChromInfo ---------- /mnt/zhaochengchen/Data/mm10/mm10.len
+PromoterInfo ---------- /mnt/liudong/data/Genome/mm10/mm10.promoter.ncbiRefSeq.WithUCSC.bed
+---------------------------------------Process fq files-----------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+----------------------------Number 1 fq sample: GSM7789740--------------------------
+-----------------------------------------------------------------------------------------------------
+No available BAM file checked，do mapping
+fastqc 2025-09-30 22:12:05 fastqc ...
+1.mapping...
+paired data 2025-09-30 22:20:38 trim_galore ...
+paired data 2025-09-30 22:25:39 bowtie2 ...
+sam2bam 2025-09-30 22:35:20 samtools view ...
+-----------------------------------------------------------------------------------------------------
+----------------------------Number 2 fq sample: GSM7789741--------------------------
+-----------------------------------------------------------------------------------------------------
+No available BAM file checked，do mapping
+fastqc 2025-09-30 22:35:46 fastqc ...
+1.mapping...
+paired data 2025-09-30 22:41:32 trim_galore ...
+paired data 2025-09-30 22:44:58 bowtie2 ...
+sam2bam 2025-09-30 22:48:53 samtools view ...
+-----------------------------------------------------------------------------------------------------
+----------------------------Number 3 fq sample: GSM7789742--------------------------
+-----------------------------------------------------------------------------------------------------
+No available BAM file checked，do mapping
+fastqc 2025-09-30 22:49:11 fastqc ...
+1.mapping...
+paired data 2025-09-30 22:56:29 trim_galore ...
+paired data 2025-09-30 23:00:53 bowtie2 ...
+sam2bam 2025-09-30 23:06:36 samtools view ...
+-----------------------------------------------------------------------------------------------------
+----------------------------Number 4 fq sample: GSM7789743--------------------------
+-----------------------------------------------------------------------------------------------------
+No available BAM file checked，do mapping
+fastqc 2025-09-30 23:07:01 fastqc ...
+1.mapping...
+paired data 2025-09-30 23:14:04 trim_galore ...
+paired data 2025-09-30 23:17:41 bowtie2 ...
+sam2bam 2025-09-30 23:22:06 samtools view ...
+---------------------------------------Process bam file----------------------------------------------------
+bam2sortbam 2025-10-01 03:37:47 samtools sort ...
+Sort BAM...
+[bam_sort_core] merging from 0 files and 100 in-memory blocks...
+BAM index...
+bam2sortbam 2025-10-01 03:39:45 samtools sort ...
+Sort BAM...
+[bam_sort_core] merging from 0 files and 100 in-memory blocks...
+BAM index...
+bam2sortbam 2025-10-01 03:41:12 samtools sort ...
+Sort BAM...
+[bam_sort_core] merging from 0 files and 100 in-memory blocks...
+BAM index...
+bam2sortbam 2025-10-01 03:43:07 samtools sort ...
+Sort BAM...
+[bam_sort_core] merging from 0 files and 100 in-memory blocks...
+BAM index...
+Merge replicates...
+----------------------------Number 1 bam sample: ESC--------------------------
+paired data 2025-10-01 04:22:58 chromosome distribution ...
+paired data 2025-10-01 04:28:55 filtering ...
+2.generating BigWig...
+paired data 2025-10-01 04:33:29 BigWig ...
+[bam_sort_core] merging from 2 files and 20 in-memory blocks...
+generate bigbed 2025-10-01 04:51:56 bedToBigBed ...
+pass1 - making usageList (21 chroms): 4999 millis
+pass2 - checking and writing primary data (45156775 records, 3 fields): 31299 millis
+3.peak calling...
+4.Promoter signal calculation...
+Skip 3 transcripts
+Results saved to /mnt/linzejie/CDesk_test/result/3.ATAC/1.preprocess/bam_fq1/Signal/ESC.PromoterSignal.csv
+----------------------------Number 2 bam sample: MEF--------------------------
+paired data 2025-10-01 05:06:32 chromosome distribution ...
+paired data 2025-10-01 05:09:00 filtering ...
+2.generating BigWig...
+paired data 2025-10-01 05:10:35 BigWig ...
+[bam_sort_core] merging from 0 files and 20 in-memory blocks...
+generate bigbed 2025-10-01 05:16:08 bedToBigBed ...
+pass1 - making usageList (21 chroms): 1242 millis
+pass2 - checking and writing primary data (12748107 records, 3 fields): 9088 millis
+3.peak calling...
+4.Promoter signal calculation...
+Skip 3 transcripts
+Results saved to /mnt/linzejie/CDesk_test/result/3.ATAC/1.preprocess/bam_fq1/Signal/MEF.PromoterSignal.csv
+ATACseq preprocessing has been finished!!!
+</blockcode></pre>
+</details>
+<details>
+<summary>
+What should the grouping file look like?</summary>
+<pre><blockcode>
+sample,group
+GSM7789740,MEF
+GSM7789741,MEF
+GSM7789742,ESC
+GSM7789743,ESC
+</blockcode>
+2 columns:
+- sample: The prefix of generated bam files 
+  (x.bam, the prefix of input fq files: x_1.fastq.gz/x_1.fq.gz,x_2.fastq.gz/x_2.fq.gz,x.fastq.gz/x.fq.gz)
+- group: The bam files of the same group would be merged
+</pre>
+</details>
+<h2 id="32-atac-qc">3.2 ATAC: QC </h2>
+<p>The CDesk ATAC QC module performs correlation analysis on ATAC-seq data across different samples to visualize sample relationships. The genome is binned by chromosome at a user-defined bin size. When a peak region file is provided, these regions are merged. Signal similarity across samples is calculated within these regions. PCA and correlation heatmaps are generated to help researchers interpret sample distribution and underlying structure in the data.</p>
+<p>Here is an example about how to use the CDesk ATAC QC module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC QC <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">--bin</span> <span class="token number">100000</span> <span class="token parameter variable">-t</span> <span class="token number">100</span> <span class="token parameter variable">--species</span> mm10
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input ATAC sample information file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species*</td>
+<td>The species specified</td>
+<td></td>
+</tr>
+<tr>
+<td>--bin</td>
+<td>Bin size for genomic binning</td>
+<td>100000</td>
+</tr>
+<tr>
+<td>--step</td>
+<td>Peak file partition step</td>
+<td>1</td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>The number of threads to use</td>
+<td>30</td>
+</tr>
+<tr>
+<td>--width</td>
+<td>The plot width</td>
+<td>12</td>
+</tr>
+<tr>
+<td>--height</td>
+<td>The plot height</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would be PCA and correlation heatmap of binned genome or merged peaks.</p>
+<div align="center">
+<img src="./images/ATAC_QC_geneCor.png" width="330"><img src="./images/ATAC_QC_genePCA.png" width="330">
+</div>
+<center><i>CDesk ATAC QC binned genome example result</i></center>
+<div align="center">
+<img src="./images/ATAC_QC_peakCor.png" width="330"><img src="./images/ATAC_QC_peakPCA.png" width="330">
+</div>
+<center><i>CDesk ATAC QC merged peaks example result</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+group,tag,bw,peak
+JGES,JGES_D0,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGES_D0.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGES_D0_peaks.bed
+JGES,JGES_D1,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGES_D1.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGES_D1_peaks.bed
+JGES,JGES_D3,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGES_D3.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGES_D3_peaks.bed
+JGES,JGES_D5,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGES_D5.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGES_D5_peaks.bed
+JGES,JGES_D7,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGES_D7.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGES_D7_peaks.bed
+MEF,MEF,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/MEF.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/MEF_peaks.bed
+JGESB,JGESB_D1,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGESB_D1.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGESB_D1_peaks.bed
+JGESB,JGESB_D3,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGESB_D3.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGESB_D3_peaks.bed
+JGESB,JGESB_D5,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGESB_D5.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGESB_D5_peaks.bed
+JGESB,JGESB_D7,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/JGESB_D7.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/JGESB_D7_peaks.bed
+ESC,ESC_r1,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/ESC_r1.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/ESC_r1_peaks.bed
+ESC,ESC_r2,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/ESC_r2.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/ESC_r2_peaks.bed
+ESC,ESC_r3,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/ESC_r3.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/peak/ESC_r3_peaks.bed
+</blockcode>
+- bw: The bw files
+- group: Same group would be assigned as same color in the PCA plot
+- tag: Assign the tag in the plots
+- peak(optional): The peak files to merge if peak parameter assigned
+</pre>
+</details>
+<h2 id="33-atac-dynamic">3.3 ATAC: dynamic </h2>
+<p>The CDesk ATAC dynamic module analyzes the dynamic changes in chromatin accessibility between two ATAC-seq datasets, identifying differentially accessible genomic regions and their associated genes over time. It calculates the signal intensity within these regions and generates heatmaps to visualize the temporal changes in chromatin accessibility.</p>
+<p>The pipeline first retrieves sample information from the metadata file and validates the input files before merging peak regions across all samples. The merged regions are then classified into dynamic patterns, including CO (closed-to-open) and OC (open-to-closed), to identify chromatin state transitions. Signal intensities for each region across samples are calculated and normalized. Heatmaps are generated to visualize these dynamic patterns, both within individual groups and in aligned multi-group comparisons. Finally, the classified regions are annotated with associated genes and subjected to transcription factor analysis, producing comprehensive outputs including region statistics and gene associations.</p>
+<p>Here is an example about how to use the CDesk ATAC dynamic module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC dynamic <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">--species</span> mm10 <span class="token parameter variable">--remove_cluster</span> CO9,OC1
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input ATAC sample information file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species*</td>
+<td>The species specified</td>
+<td></td>
+</tr>
+<tr>
+<td>--remove_cluster</td>
+<td>The cluster to remove</td>
+<td>''</td>
+</tr>
+<tr>
+<td>--important_index</td>
+<td>PSpecify the group to align, 1: the latter one in meta file, 0: the former one in meta file</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would be 6 folders and a summary file of cluster and gene in the output directory.</p>
+<ul>
+<li>beds_merge: Stores the merged peak and signal files.</li>
+<li>cluster: Stores the bed files of different open and closed stage (e.g., OC1 indicates that a region is open at the first time point and closed at all subsequent time points.).</li>
+<li>cluster_genes: The corresponding genes and tf files.</li>
+<li>img: Stores the visualization images.</li>
+<li>signal: Stores signal strength of merged regions.</li>
+<li>cluster_gene_summary.txt: The summary file of cluster and gene.</li>
+</ul>
+<div align="center">
+<img src="./images/ATAC_dynamic_1.png" width="200"><img src="./images/ATAC_dynamic_2.png" width="200"><img src="./images/ATAC_dynamic_3.png" width="220">
+</div>
+<center><i>CDesk ATAC dynamic example result</i></center>
+<div align="center">
+<img src="./images/ATAC_dynamic_sample1.png"><img src="./images/ATAC_dynamic_sample2.png">
+</div>
+<center><i>CDesk ATAC dynamic example image</i></center>
+<div align="center">
+<img src="./images/ATAC_dynamic_align.png" width="500">
+</div>
+<center><i>CDesk ATAC dynamic align example image</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+sample,tag_time,tag_group,bw,peak
+Nanog_d0,D0,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d0.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d0.e5_peaks.bed
+Nanog_d1,D1,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d1.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d1.e5_peaks.bed
+Nanog_d3,D3,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d3.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d3.e5_peaks.bed
+Nanog_d5,D5,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d5.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d5.e5_peaks.bed
+Nanog_d7,D7,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d7.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d7.e5_peaks.bed
+Nanog_d8,D8,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d8.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d8.e5_peaks.bed
+Nanog_d10,D10,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d10.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d10.e5_peaks.bed
+Nanog_d12,D12,Oct4Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/Nanog_d12.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/Nanog_d12.e5_peaks.bed
+NanogN70_d0,D0,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d0.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d0.e5_peaks.bed
+NanogN70_d1,D1,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d1.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d1.e5_peaks.bed
+NanogN70_d3,D3,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d3.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d3.e5_peaks.bed
+NanogN70_d5,D5,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d5.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d5.e5_peaks.bed
+NanogN70_d7,D7,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d7.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d7.e5_peaks.bed
+NanogN70_d8,D8,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d8.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d8.e5_peaks.bed
+NanogN70_d10,D10,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d10.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d10.e5_peaks.bed
+NanogN70_d12,D12,Oct4NanogN70,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/NanogN70_d12.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/NanogN70_d12.e5_peaks.bed
+MEF,Start,head,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/MEF.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/MEF.e5_peaks.bed
+mES,End,tail,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/bw/mES.bw,/mnt/linzejie/CDesk_test/data/3.ATAC/3.dynamic/peak/mES.e5_peaks.bed
+</blockcode>
+- sample: Sample to analyze
+- tag_time: The time tag (
+The temporal order from top to bottom, should be consistent between the two groups.)
+- tag_group: The group (one or two)
+- bw: The corresponding bw file
+- peak The corresponding peak bed file
+</pre>
+</details>
+<details>
+  <summary>A successful CDesk ATAC dynamic running process</summary>
+  <pre><blockcode>
+1. Get sample imformation
+2. Merge the samples and get the OC/CO state
+3. Get the cluster type and calculate the signal strength
+4. Plot heatmap
+5. Get gene information from bed files
+Done, you can check the results now.
+</blockcode></pre>
+</details>
+<h2 id="34-atac-motif">3.4 ATAC: motif </h2>
+<p>CDesk motif module includes four functions for transcription factor motif enrichment analysis:</p>
+<ol>
+<li>HOMER motif discovery – Performs motif analysis on peak regions or gene sequences using the HOMER tool.</li>
+</ol>
+<p>Here is an example about how to use the CDesk ATAC motif homer module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC motif homer <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./macs_result_peak.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-s</span> mm10 <span class="token parameter variable">--mode</span> peak
+
+CDesk ATAC motif homer <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./gene.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-s</span> mouse <span class="token parameter variable">--mode</span> gene
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input gene/peak information file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species*</td>
+<td>Available gene in HOMER or provide the path to genome FASTA files for peak mode</td>
+<td></td>
+</tr>
+<tr>
+<td>--mode*</td>
+<td>Analysis mode: peak/gene</td>
+<td></td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>The number of threads to use</td>
+<td>20</td>
+</tr>
+<tr>
+<td>--start</td>
+<td>offset from TSS (gene mode)</td>
+<td>-300</td>
+</tr>
+<tr>
+<td>--end</td>
+<td>offset from TSS (gene mode)</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would be 6 folders and a summary file of cluster and gene in the output directory.</p>
+<ul>
+<li>beds_merge: Stores the merged peak and signal files.</li>
+<li>cluster: Stores the bed files of different open and closed stage (e.g., OC1 indicates that a region is open at the first time point and closed at all subsequent time points.).</li>
+<li>cluster_genes: The corresponding genes and tf files.</li>
+<li>img: Stores the visualization images.</li>
+<li>signal: Stores signal strength of merged regions.</li>
+<li>cluster_gene_summary.txt: The summary file of cluster and gene.</li>
+</ul>
+<div align="center">
+<img src="./images/ATAC_dynamic_1.png" width="200">
+</div>
+<center><i>CDesk ATAC dynamic example result</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+=== peak.csv ===
+peak,sample
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_homer/GSM7789740_e3_peaks.bed,GSM7789740_e3
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_homer/GSM7789740_e5_peaks.bed,GSM7789740_e5
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_homer/GSM7789740_e7_peaks.bed,GSM7789740_e7
+=== gene.csv ===
+gene,sample
+/mnt/kongtianci/MET/Figure/Supplement/EMT_State_cip_down_genes.txt,EMT_State_cip_down
+/mnt/kongtianci/MET/Figure/Supplement/EMT_State_cip_up_genes.txt,EMT_State_cip_up
+</blockcode>
+- sample: The generated output directory name
+- peak/gene: The macs call peak results / the genes txt file
+</pre>
+</details>
+<br>
+<ol start="2">
+<li>
+<p>MEME motif analysis – Identifies motifs in FASTA sequences using MEME-ChIP.</p>
+</li>
+<li>
+<p>HOMER motif discovery result integration and heatmap visualization – Integrates HOMER results to generate TF enrichment heatmaps with significance annotations.</p>
+</li>
+<li>
+<p>Genomic region enrichment analysis – Conducts statistical enrichment testing and visualization of genomic regions associated with motifs.</p>
+</li>
+</ol>
+
+      </div>
+      <div class="md-sidebar-toc">
+<div class="md-toc">
+<div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#31-atac-preprocess" class="md-toc-link">
+            <p>3.1 ATAC: Preprocess</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#32-atac-qc" class="md-toc-link">
+            <p>3.2 ATAC: QC</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#33-atac-dynamic" class="md-toc-link">
+            <p>3.3 ATAC: dynamic</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#34-atac-motif" class="md-toc-link">
+            <p>3.4 ATAC: motif</p>
+
+          </a></div>
+</div>
+</div>
+      <a id="sidebar-toc-btn">≡</a>
+    
+    
+    
+    
+    
+    
+<script>
+document.body.setAttribute('html-show-sidebar-toc', true)
+var sidebarTOCBtn = document.getElementById('sidebar-toc-btn')
+sidebarTOCBtn.addEventListener('click', function(event) {
+  event.stopPropagation()
+  if (document.body.hasAttribute('html-show-sidebar-toc')) {
+    document.body.removeAttribute('html-show-sidebar-toc')
+  } else {
+    document.body.setAttribute('html-show-sidebar-toc', true)
+  }
+})
+</script>
+      
+  
+    </body></html>

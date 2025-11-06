@@ -5,6 +5,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import argparse
 import warnings
 import sys
+import matplotlib as mpl
+
 warnings.filterwarnings("ignore", category=UserWarning, module='scanpy')
 warnings.filterwarnings("ignore", category=UserWarning, module='umap')
 #warnings.filterwarnings("ignore", category=NumbaDeprecationWarning)
@@ -29,6 +31,8 @@ parser.add_argument('--mt_percent', type=float, default=5, help="Default: 5")
 parser.add_argument('--variable_features', type=int, default=2000, help="Default: 2000")
 parser.add_argument('--dim_prefer', type=int, default=30, help="Default: 30")
 parser.add_argument('--res', type=float, default=1, help="Default: 1")
+parser.add_argument('--width', type=float, default=10, help="Default: 10")
+parser.add_argument('--height', type=float, default=8, help="Default: 8")
 
 # 解析参数
 args = parser.parse_args()
@@ -59,7 +63,9 @@ nFeature_RNA_max = args.nFeature_RNA_max  # Default: 2500
 mt_percent = args.mt_percent  # Default: 5
 variable_features = args.variable_features  # Default: 2000
 dim_prefer = args.dim_prefer # Default: 30
-res = args.res
+res = args.res # 1
+width = args.width # 10
+height = args.height # 8
 
 # Ensure output directory exists
 if not os.path.exists(output_directory):
@@ -125,6 +131,7 @@ sc.tl.leiden(
     directed=False,
 )
 
+mpl.rcParams['figure.figsize'] = [width, height]
 with PdfPages(f'{output_directory}/{sample_name}_Scanpy_clustering.pdf') as pdf:
     # UMAP 图像保存到 PDF
     sc.pl.umap(adata, color="leiden", show=False)

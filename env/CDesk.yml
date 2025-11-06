@@ -1,4 +1,4 @@
-# CDesk.yml
+# CDesk_env.yaml
 name: CDesk
 channels:
   - conda-forge
@@ -7,35 +7,36 @@ channels:
 dependencies:
   - python=3.6
   - pip
+  # 原始工具集
   - trim-galore=0.6.4
   - hisat2=2.2.1
-  - stringtie=2.2.1
-  - gfold=1.1.4
+  - gfold
   - samtools=1.18
   - fastqc=0.12.1
   - deeptools=3.3.2 
+  # 新增工具
   - bowtie2=2.5.1
-  - bedtools=2.31.0 
+  - bedtools=2.31.0  # 提供bamToBed, genomeCoverageBed, intersectBed等
   - ucsc-bedgraphtobigwig=377
   - ucsc-bedsort=377
   - ucsc-bedclip=377
   - ucsc-bedtobigbed=377
   - ucsc-bigwigsummary=377
   - ucsc-bigwigaverageoverbed=377
-  - meme  
-  - rmats=4.1.2  
+  - meme      # 提供meme-chip
+  - rmats=4.1.2      # 提供rmats2sashimiplot
   - rmats2sashimiplot
   - velocyto.py
   - igv
   - homer
   - xvfbwrapper
-  - scte
   - networkx=2.5.1
   - bioconda::rseqc
   - louvain
   - seqkit
   - bcftools
   - cython
+  - openjdk=21
   - pip:
     - multiqc
     - cstreet

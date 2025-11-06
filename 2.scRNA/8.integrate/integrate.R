@@ -24,8 +24,9 @@ integrate_features = as.numeric(sys_argv[7]) #2000
 pc.num = as.numeric(sys_argv[8]) #50
 umap_pc = as.numeric(sys_argv[9]) #30
 max_iter_harmony = as.numeric(sys_argv[10]) #20
-plot_width = as.numeric(sys_argv[11])
-plot_height = as.numeric(sys_argv[12])
+k_anchor = as.numeric(sys_argv[11])
+plot_width = as.numeric(sys_argv[12])
+plot_height = as.numeric(sys_argv[13])
 
 group = fread(input_file, data.table = FALSE)
 input_files = unlist(group['file'])
@@ -126,27 +127,26 @@ if (mode=='merge'){
     else {
         seurat_obj <- LoadInputData(input_files[i])
     }
-    # 标准化
-    seurat_obj <- NormalizeData(object = seurat_obj, normalization.method = "LogNormalize")
-    seurat_obj <- FindVariableFeatures(object = seurat_obj, selection.method = "vst", nfeatures = nfeatures_used)
     # 用样本名称作为前缀，确保细胞名称唯一
     seurat_obj <- RenameCells(seurat_obj, add.cell.id = sample_name)
     seurat_obj@meta.data$merge_sample = sample_name
     # 存储到列表中
     Seu_obj_list[[sample_name]] <- seurat_obj
   }
-  gene_lists <- lapply(Seu_obj_list, rownames)
-  common_gene <- Reduce(intersect, gene_lists)
-  Integr_features <- SelectIntegrationFeatures(object.list = Seu_obj_list, nfeatures = integrate_features)
-  Integr_anchors <- FindIntegrationAnchors(object.list = Seu_obj_list, anchor.features = Integr_features)
-  sce.all <- IntegrateData(anchorset = Integr_anchors, normalization.method = "LogNormalize", features.to.integrate = common_gene)
-  saveRDS(sce.all,file=paste0(output_directory,'/','anchor_integrate.rds'))
-  DefaultAssay(sce.all) <- "integrated"
-  sce.all <- ScaleData(sce.all, verbose = FALSE)
+  sce.all<-merge(Seu_obj_list[[1]],y=Seu_obj_list[-1])
+  sce.all = NormalizeData(sce.all) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
   sce.all = RunPCA(sce.all,npcs=pc.num,verbose=FALSE)
-  sce.all = RunUMAP(sce.all,dims=1:umap_pc)
+  #sce.all <- RunHarmony(sce.all, group.by.vars="merge_sample", max.iter.harmony=max_iter_harmony)
+  sce.all  <- IntegrateLayers(
+    object = sce.all, method = CCAIntegration,
+    orig.reduction = "pca", new.reduction = "CCA",
+    #group.by.vars    = "merge_sample",
+    verbose = FALSE, k.anchor = k_anchor
+  )
+  saveRDS(sce.all,file=paste0(output_directory,'/','merged_CCA.rds'))
+  sce.all = RunUMAP(sce.all,reduction = 'CCA',dims=1:umap_pc)
   p = DimPlot(sce.all,group.by = 'merge_sample')
-  ggsave(paste0(output_directory,'/','batch_check_anchor.pdf'),width=plot_width,height=plot_height,p)
+  ggsave(paste0(output_directory,'/','batch_check_CCA.pdf'),width=plot_width,height=plot_height,p)
 } else if(mode=='harmony'){
   for(i in seq_along(input_files)) {
     sample_name <- samples[i]
@@ -168,7 +168,13 @@ if (mode=='merge'){
   sce.all<-merge(Seu_obj_list[[1]],y=Seu_obj_list[-1])
   sce.all = NormalizeData(sce.all) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
   sce.all = RunPCA(sce.all,npcs=pc.num,verbose=FALSE)
-  sce.all <- RunHarmony(sce.all, group.by.vars="merge_sample", max.iter.harmony=max_iter_harmony)
+  #sce.all <- RunHarmony(sce.all, group.by.vars="merge_sample", max.iter.harmony=max_iter_harmony)
+  sce.all <- IntegrateLayers(
+    object = sce.all, method = HarmonyIntegration,
+    orig.reduction = "pca", new.reduction = "harmony",
+    group.by.vars    = "merge_sample",
+    verbose = FALSE,max.iter.harmony = max_iter_harmony
+  )
   saveRDS(sce.all,file=paste0(output_directory,'/','merged_harmony.rds'))
   sce.all = RunUMAP(sce.all,reduction = 'harmony',dims=1:umap_pc)
   p = DimPlot(sce.all,group.by = 'merge_sample')

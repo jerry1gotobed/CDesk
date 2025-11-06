@@ -34,7 +34,7 @@ if (! start_p %in% unique(seu_obj@meta.data[[meta]])){
 }
 
 # Get seurat expression matrix
-data <- GetAssayData(seu_obj, assay = 'RNA', slot = 'counts')
+data <- GetAssayData(seu_obj, assay = 'RNA', layer = 'counts')
 
 # Get meta information
 cell_metadata <- seu_obj@meta.data

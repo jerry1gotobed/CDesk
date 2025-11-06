@@ -1,14 +1,13 @@
 rm(list = ls())
 
 sys_argv <- commandArgs(T)
-sample1 <- sys_argv[1]
-sample2 <- sys_argv[2]
-group <- sys_argv[3]
-output_dir <- sys_argv[4]
-gene_list <- sys_argv[5]  # All
-batch <- sys_argv[6]
-plot_width <- as.numeric(sys_argv[7])
-plot_height <- as.numeric(sys_argv[8])
+path <- sys_argv[1]
+group <- sys_argv[2]
+output_dir <- sys_argv[3]
+gene_list <- sys_argv[4]  # All
+batch <- sys_argv[5]
+plot_width <- as.numeric(sys_argv[6])
+plot_height <- as.numeric(sys_argv[7])
 
 suppressMessages(library("gplots"))
 suppressMessages(library(edgeR))
@@ -18,9 +17,9 @@ suppressMessages(library(sva))
 suppressMessages(library(dplyr))
 suppressMessages(library(ggplot2))
 suppressMessages(library(ggrepel))
+suppressMessages(library(pheatmap))
 
-cat("sample1:",sample1,"\n")
-cat("sample2:",sample2,"\n")
+cat("Matrix list file:",path,"\n")
 cat("Grouping file:",group,"\n")
 cat("Output directory:",output_dir,"\n")
 cat("Gene list:",gene_list,"\n")
@@ -99,10 +98,17 @@ AllGeneExpressionPlot <-function(gene_list,out_name,matrix,CV2,unique_samples,be
 ###################################################################################################
 ################################            READ IN DATA           ################################
 ###################################################################################################
-data1 = fread(sample1, data.table = FALSE)
-rownames(data1) = data1[[1]];data1 = data1[,-1]
-data2 = fread(sample2, data.table = FALSE)
-rownames(data2) = data2[[1]];data2 = data2[,-1]
+# data1 = fread(sample1, data.table = FALSE)
+# rownames(data1) = data1[[1]];data1 = data1[,-1]
+# data2 = fread(sample2, data.table = FALSE)
+# rownames(data2) = data2[[1]];data2 = data2[,-1]
+datas = trimws(readLines(path))
+data_list <- list()
+for (data in datas){
+  sample = fread(data, data.table = FALSE)
+  rownames(sample) = sample[[1]];sample = sample[,-1]
+  data_list <- c(data_list, list(sample)) 
+}
 meta = fread(group, data.table = FALSE)
 meta$group = as.character(meta$group)
 meta$tag = as.character(meta$tag)
@@ -112,8 +118,10 @@ meta <- meta[order(meta$group), ]
 ##############################             Remove batch            ################################
 ###################################################################################################
 # Merge data
-common_genes <- intersect(rownames(data1),rownames(data2))
-data <- cbind(data1[common_genes,],data2[common_genes,])
+# common_genes <- intersect(rownames(data1),rownames(data2))
+# data <- cbind(data1[common_genes,],data2[common_genes,])
+common_genes <- Reduce(intersect, lapply(data_list, rownames))
+data <- do.call(cbind, lapply(data_list, `[`, common_genes, ))
 all_samples <- colnames(data)
 all_genes <- rownames(data)
 
@@ -214,6 +222,10 @@ plot_data = na.omit(plot_data)
 pdf(paste0(output_dir,"/pca.pdf"),width=plot_width,height=plot_height)
 pca <- prcomp(t(plot_data))
 
+var_explained <- pca$sdev^2 / sum(pca$sdev^2) * 100
+pc1_pct <- round(var_explained[1], 1)
+pc2_pct <- round(var_explained[2], 1)
+
 pca_data <- data.frame(
   PC1 = pca$x[, "PC1"],
   PC2 = pca$x[, "PC2"],
@@ -224,8 +236,16 @@ pca_data <- data.frame(
 ggplot(pca_data, aes(x = PC1, y = PC2, label = Samples, color = group)) +
   geom_point(size = 3) +  
   geom_text_repel(size = 3, max.overlaps = Inf,segment.linetype = "dashed") + 
-  labs(title = "PCA", x = "PC1", y = "PC2") +
-  theme_classic()
+  labs(
+    title = "PCA",
+    x = paste0("PC1 (", pc1_pct, "%)"),
+    y = paste0("PC2 (", pc2_pct, "%)")
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 while (!is.null(dev.list()))  dev.off()
 
 ###################################################################################################
@@ -235,23 +255,23 @@ while (!is.null(dev.list()))  dev.off()
 sample_cor <- cor(plot_data)
 pdf(paste0(output_dir,"/cor.pdf"),width=plot_width,height=plot_height)
 ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"), bias=1)(100)
-heatmap.2(sample_cor,main="",col=ColorRamp,key=F,trace="none",margins=c(13,13), cexRow=1, cexCol=1, revC=T, symm=T, distfun=function(c) as.dist(1 - c))
-cor_cell <- matrix(as.character(round(sample_cor, 2)), ncol=dim(sample_cor)[2])
-heatmap.2(sample_cor,main="",col=ColorRamp,key=F,trace="none",cellnote=cor_cell, notecol="black", notecex=0.5, margins=c(13,13), cexRow=1, cexCol=1, revC=T, symm=T, distfun=
-            function(c) as.dist(1 - c))
-#dev.off()
-while (!is.null(dev.list()))  dev.off()
+ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"))(100)
 
-pdf(paste0(output_dir,"/cor.legend.pdf"),width=3,height=1.8)
-par(mar=c(4,2,4,2))
-plotMatrix <- sample_cor
-all_exp <- as.matrix(plotMatrix) # using same scale bar
-zmax <- max(na.omit(all_exp))
-zmin <- min(na.omit(all_exp))
-ColorLevels <- seq(to=zmax,from=zmin, length=1000)   #number sequence
-image(ColorLevels,1,matrix(data=ColorLevels, nrow=length(ColorLevels),ncol=1),col=ColorRamp, xlab="Correlation cofficient",ylab="",cex.axis=2,xaxt="n",yaxt="n",useRaster=T);
-box(lwd=2)
-axis(side=1,c(zmin,(zmax+zmin)/2,zmax),labels=c(round(zmin,2),round((zmax+zmin)/2,2),round(zmax,2)))
+pheatmap(
+  sample_cor,
+  color            = ColorRamp,
+  display_numbers  = TRUE,
+  number_format    = "%.2f",
+  fontsize_number  = 8,
+  cluster_rows     = T,
+  cluster_cols     = T,
+  legend            = TRUE,
+  legend_breaks    = c(0,0.5,1),
+  legend_labels    = c("0","0.5","1"),
+  border_color     = NA,
+  show_rownames    = TRUE,
+  show_colnames    = TRUE
+)
 while (!is.null(dev.list()))  dev.off()
 
 ###################################################################################################

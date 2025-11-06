@@ -24,7 +24,7 @@ def parse_arguments():
     parser.add_argument("-s",required=True,type=str, help="Input cell state list file")
     parser.add_argument("-n",required=True, type=str,default='',help="Output directory name")
     parser.add_argument("-o",required=True, type=str, help="Output directory")
-    parser.add_argument("--config",required=True, type=str, help="The config file")
+    #parser.add_argument("--config",required=True, type=str, help="The config file")
     return parser.parse_args()
 
 def main():
@@ -39,13 +39,14 @@ def main():
 
     os.makedirs(args.o, exist_ok=True)
     
-    with open(args.config, "r") as f:
-        config = json.load(f)
+    #with open(args.config, "r") as f:
+    #    config = json.load(f)
 
-    cmd = [config['software']['CStreet'],'-i',expMatrix,'-s',cellState,'-n',args.n,'-o',args.o]
+    #cmd = [config['software']['CStreet'],'-i',expMatrix,'-s',cellState,'-n',args.n,'-o',args.o]
+    cmd = ['CStreet','-i',expMatrix,'-s',cellState,'-n',args.n,'-o',args.o]
     cmd = flatten_list(cmd)
     subprocess.run(cmd, check=True)
-
+    print('Finished, you can see the results now.')
 
 if __name__ == "__main__":
 

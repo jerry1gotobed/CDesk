@@ -18,6 +18,7 @@ library(ggplot2) %>% suppressMessages()
 library(ggrepel) %>% suppressMessages()
 suppressMessages(library(edgeR))
 suppressMessages(library(sva))
+suppressMessages(library(pheatmap))
 
 if (!dir.exists(output_directory)) {
   dir.create(output_directory, recursive = TRUE)
@@ -43,8 +44,13 @@ if (batch!='no'){
   }
 }
 
+meta$sample = as.character(meta$sample)
 meta$group = as.character(meta$group)
 meta$tag = as.character(meta$tag)
+
+if (any(duplicated(meta$tag))) {
+  stop("Duplicates in tag column")
+} 
 
 if (any(!meta$sample %in% colnames(data))){
   error_message <- paste0(
@@ -86,7 +92,8 @@ if (batch!='no'){
 
 # Process
 row.names(meta) = meta$sample
-all_samples <- meta[colnames(data),'tag']
+lables <- meta[colnames(data),'tag']
+colors <- meta[colnames(data),'group']
 
 ###################################################################################################
 ################################                PLOT               ################################
@@ -97,17 +104,31 @@ data = na.omit(data)
 pdf(paste0(output_directory,"/pca.pdf"),width=plot_width,height=plot_height)
 pca <- prcomp(t(data))
 
+var_explained <- pca$sdev^2 / sum(pca$sdev^2) * 100
+pc1_pct <- round(var_explained[1], 1)
+pc2_pct <- round(var_explained[2], 1)
+
 pca_data <- data.frame(
-  PC1 = pca$x[, "PC1"],
-  PC2 = pca$x[, "PC2"],
-  Samples = all_samples
+  PC1     = pca$x[, "PC1"],
+  PC2     = pca$x[, "PC2"],
+  Label  = lables,
+  Color = colors
 )
+
 # Plot
-ggplot(pca_data, aes(x = PC1, y = PC2, label = Samples, color = Samples)) +
-  geom_point(size = 3) +  
-  geom_text_repel(size = 3, max.overlaps = Inf,segment.linetype = "dashed") +  
-  labs(title = "PCA", x = "PC1", y = "PC2") +
-  theme_classic()
+ggplot(pca_data, aes(x = PC1, y = PC2, label = Label, color = Color)) +
+  geom_point(size = 3) +
+  geom_text_repel(size = 3, max.overlaps = Inf, segment.linetype = "dashed") +
+  labs(
+    title = "PCA",
+    x = paste0("PC1 (", pc1_pct, "%)"),
+    y = paste0("PC2 (", pc2_pct, "%)")
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),  
+    panel.grid.minor = element_blank()   
+)
 while (!is.null(dev.list()))  dev.off()
 
 
@@ -121,38 +142,44 @@ pdf(paste0(output_directory,"/MDS.pdf"), width = plot_width, height = plot_heigh
 mds_data <- data.frame(
   c1 = x,
   c2 = y,
-  Samples = all_samples
+  Label  = lables,
+  Color = colors
 )
 # Plot
-ggplot(mds_data, aes(x = c1, y = c2, label = Samples, color = Samples)) +
+ggplot(mds_data, aes(x = c1, y = c2, label = Label, color = Color)) +
   geom_point(size = 3) +  
   geom_text_repel(size = 3, max.overlaps = Inf,segment.linetype = "dashed") + 
   labs(title = "MDS", x = "Coordinate 1", y = "Coordinate 2") +
-  theme_classic()
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),  
+    panel.grid.minor = element_blank()   
+)
 
 while (!is.null(dev.list()))  dev.off()
 
 # correlation
 colnames(data) = meta$tag
 sample_cor <- cor(data)
-pdf(paste0(output_directory,"/cor.pdf"),width=plot_width,height=plot_height)
+pdf(paste0(output_directory,"/cor_heatmap.pdf"),width=plot_width,height=plot_height)
 ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"), bias=1)(100)
-heatmap.2(sample_cor,main="",col=ColorRamp,key=F,trace="none",margins=c(13,13), cexRow=1, cexCol=1, revC=T, symm=T, distfun=function(c) as.dist(1 - c))
-cor_cell <- matrix(as.character(round(sample_cor, 2)), ncol=dim(sample_cor)[2])
-heatmap.2(sample_cor,main="",col=ColorRamp,key=F,trace="none",cellnote=cor_cell, notecol="black", notecex=0.5, margins=c(13,13), cexRow=1, cexCol=1, revC=T, symm=T, distfun=
-            function(c) as.dist(1 - c))
+ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"))(100)
+
+pheatmap(
+  sample_cor,
+  color            = ColorRamp,
+  display_numbers  = TRUE,        
+  number_format    = "%.2f",     
+  fontsize_number  = 8,        
+  cluster_rows     = T,      
+  cluster_cols     = T,
+  legend            = TRUE,      
+  legend_breaks    = c(0,0.5,1),  
+  legend_labels    = c("0","0.5","1"),
+  border_color     = NA,
+  show_rownames    = TRUE,
+  show_colnames    = TRUE
+)
 while (!is.null(dev.list()))  dev.off()
 
-pdf(paste0(output_directory,"/cor.legend.pdf"),width=3,height=1.8)
-par(mar=c(4,2,4,2))
-plotMatrix <- sample_cor
-all_exp <- as.matrix(plotMatrix) # using same scale bar
-zmax <- max(na.omit(all_exp))
-zmin <- min(na.omit(all_exp))
-ColorLevels <- seq(to=zmax,from=zmin, length=1000)   #number sequence
-image(ColorLevels,1,matrix(data=ColorLevels, nrow=length(ColorLevels),ncol=1),col=ColorRamp, xlab="Correlation cofficient",ylab="",cex.axis=2,xaxt="n",yaxt="n",useRaster=T);
-box(lwd=2)
-axis(side=1,c(zmin,(zmax+zmin)/2,zmax),labels=c(round(zmin,2),round((zmax+zmin)/2,2),round(zmax,2)))
-#dev.off()
-while (!is.null(dev.list()))  dev.off()
 cat('Done, you can check the results now\n')

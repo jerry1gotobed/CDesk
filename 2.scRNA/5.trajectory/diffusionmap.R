@@ -32,7 +32,7 @@ if (! start_p %in% unique(seurat_obj@meta.data[[meta]])){
 }
 
 # 获取 Seurat 对象中的表达矩阵（基因表达数据）
-data.matrix <- GetAssayData(seurat_obj, assay = "RNA", slot = "data")
+data.matrix <- GetAssayData(seurat_obj, assay = "RNA", layer = "data")
 data.matrix = t(as.matrix(data.matrix))
 
 pdf(paste0(output_directory,'/DiffusionMap.pdf'),width=plot_width,height=plot_height)

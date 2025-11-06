@@ -15,9 +15,9 @@ library(stringr) %>% suppressMessages()
 library(data.table) %>% suppressMessages()
 library(ggplot2) %>% suppressMessages()
 library(ggrepel) %>% suppressMessages()
-suppressMessages(library(edgeR))
-suppressMessages(library(sva))
+suppressMessages(library(pheatmap))
 
+input_folder = file.path(input_folder,'tmp')
 # 获取文件夹下所有以 `.SignalAcrossGenome.txt` 结尾的文件
 file_list <- list.files(input_folder, pattern = "\\.SignalAcrossGenome\\.txt$", full.names = TRUE)
 
@@ -45,6 +45,7 @@ for (file in file_list) {
 colnames(data) <- all_samples
 
 meta = fread(meta_file, data.table = FALSE)
+meta$sample = sub("\\..*$", "", basename(meta$bw))
 
 if (any(!meta$sample %in% colnames(data))){
   error_message <- paste0(
@@ -58,12 +59,13 @@ if (any(!meta$sample %in% colnames(data))){
 
 data = data[,colnames(data) %in% meta$sample]
 data = data[,meta$sample]
+colnames(data) = meta$tag
 
-check_col_names = colnames(meta)
-if (any(!sort(c("sample","group","tag")) == sort(check_col_names[1:3]))){
-    stop('分组信息表3列：sample,group,tag')
+required <- c("sample", "group", "tag")
+if (!any(required %in% colnames(meta))) {
+  stop("Error: 数据框中必须至少包含以下一列: ",
+       paste(required, collapse = ", "))
 }
-
 
 ###################################################################################################
 ################################                PLOT               ################################
@@ -72,44 +74,50 @@ data = na.omit(data)
 pca <- prcomp(t(data))
 
 pdf(paste0(output_dir,"/GenomeBin.PCA.pdf"),width = plot_width, height = plot_height)
-#par(mar=c(6,6,3,3))
-#plot(pca$x[,"PC1"],pca$x[,"PC2"],col=COLS,pch=19,lwd=1,main="PCA",xlab=paste("PC1 (",round(summary(pca)$importance[2,1]*100,1),"%)",sep=""),ylab=paste("PC2 (",round(summary(pca)$importance[2,2]*100,1),"%)",sep=""))
-
-#pdf(paste0(output_dir,"/GenomeBin.PCA.legend.pdf"),width=5,height=5)
-#plot(1,type="n",xaxt="n",yaxt="n",bty="n",xlab="",ylab="")
-#legend("center", unique(meta$rep), col=unique(COLS),pch=19,bty="n",ncol = 1)
+var_explained <- pca$sdev^2 / sum(pca$sdev^2) * 100
+pc1_pct <- round(var_explained[1], 1)
+pc2_pct <- round(var_explained[2], 1)
 
 pca_data <- data.frame(
-  PC1 = pca$x[, "PC1"],
-  PC2 = pca$x[, "PC2"],
-  COLs = meta$group,
-  Tag = meta$tag
+  PC1     = pca$x[, "PC1"],
+  PC2     = pca$x[, "PC2"]
 )
 
-# 使用 ggplot 绘制 PCA 图
-ggplot(pca_data, aes(x = PC1, y = PC2, label = Tag, color = COLs)) +
-  geom_point(size = 3) +  # 绘制散点
-  geom_text_repel(size = 3, max.overlaps = Inf,segment.linetype = "dashed") +  # 自动调整标签位置，防止遮挡
-  labs(title = "PCA", x = "PC1", y = "PC2") +
-  theme_classic()
+# Plot
+ggplot(pca_data, aes(x = PC1, y = PC2, label = meta$tag, color = meta$group)) +
+  geom_point(size = 3) +
+  geom_text_repel(size = 3, max.overlaps = Inf, segment.linetype = "dashed") +
+  labs(
+    title = "PCA",
+    x = paste0("PC1 (", pc1_pct, "%)"),
+    y = paste0("PC2 (", pc2_pct, "%)")
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) + scale_color_discrete(name = "Group")
 while (!is.null(dev.list()))  dev.off()
 
 # correlation of all the samples
-colnames(data) = str_replace(colnames(data),'.SignalAcrossGenome','')
-sample_cor <- cor(data,use="pair")
+sample_cor <- cor(data)
 pdf(paste0(output_dir,"/GenomeBin.COR.pdf"),width = plot_width, height = plot_height)
-cor_cell <- matrix(as.character(round(sample_cor, 2)), ncol=dim(sample_cor)[2])
 ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"), bias=1)(100)
-heatmap.2(sample_cor,main="",col=ColorRamp,key=F,trace="none",cellnote=cor_cell, notecol="black", notecex=0.5, margins=c(8,8), cexRow=1, cexCol=1, revC=T, symm=T, distfun=function(c) as.dist(1 - c))
-while (!is.null(dev.list()))  dev.off()
+ColorRamp <- colorRampPalette(c("white","#F2FAB0","red"))(100)
 
-pdf(paste0(output_dir,"/GenomeBin.COR.legend.pdf"),width=3,height=1.8)
-par(mar=c(4,2,4,2))
-plotMatrix <- sample_cor
-all_exp <- as.matrix(plotMatrix) # using same scale bar
-zmax <- max(na.omit(all_exp))
-zmin <- min(na.omit(all_exp))
-ColorLevels <- seq(to=zmax,from=zmin, length=1000)   #number sequence
-image(ColorLevels,1,matrix(data=ColorLevels, nrow=length(ColorLevels),ncol=1),col=ColorRamp, xlab="Pearson correlation cofficient",ylab="",cex.axis=2,xaxt="n",yaxt="n",useRaster=T);box(lwd=2)
-axis(side=1,c(zmin,(zmax+zmin)/2,zmax),labels=c(round(zmin,2),round((zmax+zmin)/2,2),round(zmax,2)))
+pheatmap(
+  sample_cor,
+  color            = ColorRamp,
+  display_numbers  = TRUE,
+  number_format    = "%.2f",
+  fontsize_number  = 8,
+  cluster_rows     = T,
+  cluster_cols     = T,
+  legend            = TRUE,
+  legend_breaks    = c(0,0.5,1),
+  legend_labels    = c("0","0.5","1"),
+  border_color     = NA,
+  show_rownames    = TRUE,
+  show_colnames    = TRUE
+)
 while (!is.null(dev.list()))  dev.off()

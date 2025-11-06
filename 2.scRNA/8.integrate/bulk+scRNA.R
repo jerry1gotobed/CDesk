@@ -127,26 +127,42 @@ all_genes <- intersect(rownames(bulk_data), common_gene)
 if (length(all_genes) == 0){
   stop('No common gene in scRNA and bulkRNA data list')
 }
+
 # scRNA对象
-scRNA_features <- SelectIntegrationFeatures(object.list = scRNA_list, nfeatures = integrate_features)
-scRNA_anchors <- FindIntegrationAnchors(object.list = scRNA_list, reference = c(1, 3), anchor.features = scRNA_features)
-scRNA_data <- IntegrateData(anchorset = scRNA_anchors, normalization.method = "LogNormalize", features.to.integrate = all_genes)
+scRNA_data <- merge(scRNA_list[[1]],y=scRNA_list[-1])
+scRNA_data = NormalizeData(scRNA_data) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
+scRNA_data = RunPCA(scRNA_data,npcs=pc.num,verbose=FALSE)
+
+scRNA_data  <- IntegrateLayers( 
+  object = scRNA_data, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "harmony",
+  verbose = FALSE,features=all_genes
+)
 
 # 合并bulk
 bulk_data = CreateSeuratObject(counts=bulk_data)
-bulk_data = NormalizeData(object = bulk_data, normalization.method = "LogNormalize")
-bulk_data <- FindVariableFeatures(object = bulk_data, selection.method = "vst", nfeatures = nfeatures_used)
 
 merge_list = c(scRNA_list,list(bulk_data))
-merge_features <- SelectIntegrationFeatures(object.list = merge_list, nfeatures = integrate_features)
-merge_anchors <- FindIntegrationAnchors(object.list = merge_list, reference = c(1, 2), anchor.features = merge_features, dims=1:2,k.anchor = 2, k.filter = NA, k.score = 2)
-merge_data <- IntegrateData(anchorset = merge_anchors, normalization.method = "LogNormalize", features.to.integrate = all_genes)
+merge_data <- merge(merge_list[[1]],y=merge_list[-1])
+merge_data = NormalizeData(merge_data) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
+merge_data = RunPCA(merge_data,npcs=pc.num,verbose=FALSE)
+
+merge_data  <- IntegrateLayers( 
+  object = merge_data, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "integrated",
+  verbose = FALSE,features=all_genes
+)
 
 ################# 可视化
 meta_data = as.data.frame(meta_data)
 rownames(meta_data) = meta_data$sample
 mark_cells <- intersect(colnames(scRNA_data),rownames(meta_data))
 dataType <- c(rep("scRNA", length(mark_cells)),rep("bulk", ncol(bulk_data)))
+
+merge_data <- FindNeighbors(merge_data, reduction = "integrated", dims = 1:30)
+merge_data <- FindClusters(merge_data, resolution = 1, cluster.name = "integrated.harmony")
+merge_data <- RunUMAP(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.umap")
+merge_data <- RunTSNE(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.tsne")
 
 mark_cells <- c(mark_cells,colnames(bulk_data))
 select_cells <- subset(merge_data, cells = mark_cells)
@@ -157,13 +173,6 @@ select_cells@meta.data$celltypes <- celltypes
 
 names(dataType) <- colnames(select_cells)
 select_cells@meta.data$dataType <- dataType
-
-# RNA
-DefaultAssay(select_cells) <- "integrated"
-select_cells <- ScaleData(select_cells, verbose = FALSE)
-select_cells <- RunPCA(object = select_cells,npcs=pc.num)
-select_cells <- RunUMAP(object = select_cells, reduction = "pca", dims = 1:pc_reduce)
-select_cells <- RunTSNE(object = select_cells, reduction = "pca", dims = 1:pc_reduce)
 
 pdf(paste0(output_directory,'/scRNA+bulk_integrate.pdf'),width=plot_width,height=plot_height)
 highlight_cells <- colnames(bulk_data)
@@ -197,12 +206,12 @@ interactive_plot <- plot_ly(pca_df, x = ~PC_1, y = ~PC_2, color = ~celltypes, sy
                             text = ~cell_id, hoverinfo = "text") %>%  add_markers()
 saveWidget(interactive_plot, paste0(output_directory,"/PCA_integrate.html"), selfcontained = FALSE)
 
-umap_coords <- Embeddings(select_cells, "umap")
+umap_coords <- Embeddings(select_cells, "integrated.umap")
 umap_df <- as.data.frame(umap_coords)
 umap_df$cell_id <- colnames(select_cells)
 highlight_df <- umap_df[umap_df$cell_id %in% highlight_cells, ]
-DimPlot(select_cells, reduction = "umap", group.by = "celltypes", shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+ 
-  geom_text_repel(data = highlight_df, aes(x = UMAP_1, y = UMAP_2, label = cell_id),
+DimPlot(select_cells, reduction = "integrated.umap", group.by = "celltypes", shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+ 
+  geom_text_repel(data = highlight_df, aes(x = 	integratedumap_1, y = 	integratedumap_2, label = cell_id),
                   size = 2, color = "black", 
                   segment.color = "black",         # 虚线颜色
                   segment.linetype = "dashed",    # 虚线样式
@@ -214,15 +223,15 @@ DimPlot(select_cells, reduction = "umap", group.by = "celltypes", shape.by = "da
 # 创建交互式图形,保存为 HTML 文件
 umap_df$datatype = dataType
 # 根据 datatype 映射形状
-interactive_plot <- plot_ly(umap_df, x = ~UMAP_1, y = ~UMAP_2, color = ~celltypes, symbol = ~datatype,
+interactive_plot <- plot_ly(umap_df, x = ~	integratedumap_1, y = ~	integratedumap_2, color = ~celltypes, symbol = ~datatype,
                             text = ~cell_id, hoverinfo = "text") %>%  add_markers()
 saveWidget(interactive_plot, paste0(output_directory,"/umap_integrate.html"), selfcontained = FALSE)
 
-tsne_coords <- Embeddings(select_cells, "tsne")
+tsne_coords <- Embeddings(select_cells, "integrated.tsne")
 tsne_df <- as.data.frame(tsne_coords)
 tsne_df$cell_id <- colnames(select_cells)
 highlight_df <- tsne_df[tsne_df$cell_id %in% highlight_cells, ]
-DimPlot(select_cells, reduction = "tsne", group.by = "celltypes",shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+
+DimPlot(select_cells, reduction = "integrated.tsne", group.by = "celltypes",shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+
   geom_text_repel(data = highlight_df, aes(x = tSNE_1, y = tSNE_2, label = cell_id),
                   size = 2, color = "black", 
                   segment.color = "black",         # 虚线颜色
@@ -240,90 +249,5 @@ interactive_plot <- plot_ly(tsne_df, x = ~tSNE_1, y = ~tSNE_2, color = ~celltype
 saveWidget(interactive_plot, paste0(output_directory,"/tSNE_integrate.html"), selfcontained = FALSE)
 while (!is.null(dev.list()))  dev.off()
 
-# RNA
-select_cells_RNA = select_cells
-DefaultAssay(select_cells_RNA) <- "RNA"
-select_cells_RNA <- FindVariableFeatures(object = select_cells_RNA, selection.method = "vst",assay = "RNA", nfeatures = nfeatures_used)
-select_cells_RNA <- ScaleData(object = select_cells_RNA, assay = "RNA")
-select_cells_RNA <- RunPCA(object = select_cells_RNA, assay = "RNA",npcs=pc.num)
-select_cells_RNA <- RunUMAP(object = select_cells_RNA, assay = "RNA", reduction = "pca", dims = 1:pc_reduce)
-select_cells_RNA <- RunTSNE(object = select_cells_RNA, assay = "RNA", reduction = "pca", dims = 1:pc_reduce)
-
-pdf(paste0(output_directory,'/scRNA+bulk_no_integrate.pdf'),width=plot_width,height=plot_height)
-highlight_cells <- colnames(bulk_data)
-
-# 创建 DimPlot 图
-plot <- DimPlot(select_cells_RNA, reduction = "pca", group.by = "celltypes", shape.by = "dataType", 
-                cols = cccol[1:length(table(celltypes))], 
-                shuffle = TRUE,raster = FALSE)+ scale_shape_manual(values = c(11,20))
-
-# 标记bulk data
-pca_coords <- Embeddings(select_cells_RNA, "pca")
-pca_df <- as.data.frame(pca_coords)
-pca_df$cell_id <- colnames(select_cells_RNA)
-highlight_df <- pca_df[pca_df$cell_id %in% highlight_cells, ]
-
-# 添加标签和虚线连接
-plot  +
-  geom_text_repel(data = highlight_df, aes(x = PC_1, y = PC_2, label = cell_id),
-                  size = 2, color = "black", 
-                  segment.color = "black",         # 虚线颜色
-                  segment.linetype = "dashed",    # 虚线样式
-                  segment.alpha = 0.5,            # 虚线透明度
-                  segment.size = 0.2,             # 虚线粗细
-                  max.overlaps = Inf,             # 确保所有标签都显示
-                  force = 5,                      # 增加标签的分散力度
-                  force_pull = 0.5)               # 减少标签的吸附力 
-
-# 创建交互式图形,保存为 HTML 文件
-pca_df$datatype = dataType
-# 根据 datatype 映射形状
-interactive_plot <- plot_ly(pca_df, x = ~PC_1, y = ~PC_2, color = ~celltypes, symbol = ~datatype,
-                            text = ~cell_id, hoverinfo = "text") %>%  add_markers()
-saveWidget(interactive_plot, paste0(output_directory,"/PCA_no_integrate.html"), selfcontained = FALSE)
-
-umap_coords <- Embeddings(select_cells_RNA, "umap")
-umap_df <- as.data.frame(umap_coords)
-umap_df$cell_id <- colnames(select_cells_RNA)
-highlight_df <- umap_df[umap_df$cell_id %in% highlight_cells, ]
-
-DimPlot(select_cells_RNA, reduction = "umap", group.by = "celltypes", shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+ 
-  geom_text_repel(data = highlight_df, aes(x = UMAP_1, y = UMAP_2, label = cell_id),
-                  size = 2, color = "black", 
-                  segment.color = "black",         # 虚线颜色
-                  segment.linetype = "dashed",    # 虚线样式
-                  segment.alpha = 0.5,            # 虚线透明度
-                  segment.size = 0.2,             # 虚线粗细
-                  max.overlaps = Inf,             # 确保所有标签都显示
-                  force = 5,                      # 增加标签的分散力度
-                  force_pull = 0.5)               # 减少标签的吸附力 
-# 创建交互式图形,保存为 HTML 文件
-umap_df$datatype = dataType
-# 根据 datatype 映射形状
-interactive_plot <- plot_ly(umap_df, x = ~UMAP_1, y = ~UMAP_2, color = ~celltypes, symbol = ~datatype,
-                            text = ~cell_id, hoverinfo = "text") %>%  add_markers()
-saveWidget(interactive_plot, paste0(output_directory,"/umap_no_integrate.html"), selfcontained = FALSE)
-
-tsne_coords <- Embeddings(select_cells_RNA, "tsne")
-tsne_df <- as.data.frame(tsne_coords)
-tsne_df$cell_id <- colnames(select_cells_RNA)
-highlight_df <- tsne_df[tsne_df$cell_id %in% highlight_cells, ]
-DimPlot(select_cells_RNA, reduction = "tsne", group.by = "celltypes",shape.by = "dataType",cols = cccol[1:length(table(celltypes))],shuffle=T,raster = FALSE) + scale_shape_manual(values = c(11,20))+
-  geom_text_repel(data = highlight_df, aes(x = tSNE_1, y = tSNE_2, label = cell_id),
-                  size = 2, color = "black", 
-                  segment.color = "black",         # 虚线颜色
-                  segment.linetype = "dashed",    # 虚线样式
-                  segment.alpha = 0.5,            # 虚线透明度
-                  segment.size = 0.2,             # 虚线粗细
-                  max.overlaps = Inf,             # 确保所有标签都显示
-                  force = 5,                      # 增加标签的分散力度
-                  force_pull = 0.5)               # 减少标签的吸附力 
-# 创建交互式图形,保存为 HTML 文件
-tsne_df$datatype = dataType
-# 根据 datatype 映射形状
-interactive_plot <- plot_ly(tsne_df, x = ~tSNE_1, y = ~tSNE_2, color = ~celltypes, symbol = ~datatype,
-                            text = ~cell_id, hoverinfo = "text") %>%  add_markers()
-saveWidget(interactive_plot, paste0(output_directory,"/tSNE_no_integrate.html"), selfcontained = FALSE)
-
-while (!is.null(dev.list()))  dev.off()
 cat('Finished, you can see the results now.\n')
+

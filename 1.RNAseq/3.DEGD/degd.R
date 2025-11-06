@@ -46,12 +46,12 @@ if (gene != 'NO'){
 deseq2 =function(exp,Group,pvalue_t,logFC_t){
   colData <- data.frame(row.names =colnames(exp),
                         condition=Group)
-  dds <- DESeqDataSetFromMatrix(
+  dds <- suppressMessages(DESeqDataSetFromMatrix(
     countData = exp,
     colData = colData,
-    design = ~ condition)
-  dds <- DESeq(dds)
-  res <- results(dds, contrast = c("condition",rev(levels(Group))))
+    design = ~ condition))
+  dds <- suppressMessages(DESeq(dds,quiet = TRUE))
+  res <- suppressMessages(results(dds, contrast = c("condition",rev(levels(Group)))))
   DEG <- as.data.frame(res)
   DEG <- arrange(DEG,padj)
   DEG = na.omit(DEG)
@@ -115,6 +115,7 @@ draw_volcano = function(deg,mark,pvalue_t,logFC_t,width,height,output_dir){
   )
   deg$label <- ifelse(row.names(deg) %in% mark, row.names(deg), NA)
   deg$sig <- factor(deg$sig, levels = c("Down", "NotSig", "Up"))
+  deg <- deg %>% arrange(sig != "NotSig")
   p = ggplot(deg,aes(log2FoldChange,-1*log10(padj))) + 
     geom_point(aes(color = sig)) +                          
     labs(x="log2(FC)",
@@ -182,9 +183,9 @@ draw_heatmap = function(exp,gene,meta,width,height,output_dir,top_num){
     pdf(paste0(output_dir,'/','heatmap.pdf'),width = width,height = height)
     ht = Heatmap(as.matrix(data),
             cluster_columns = TRUE,
-            cluster_rows = TRUE,    
-            show_row_names = FALSE,  
-            show_column_names = TRUE,  
+            cluster_rows = TRUE,
+            show_row_names = FALSE,
+            show_column_names = TRUE,
             top_annotation = column_annotation
             )
     draw(ht)
@@ -193,6 +194,13 @@ draw_heatmap = function(exp,gene,meta,width,height,output_dir,top_num){
 }
 
 Cols = setdiff(colnames(meta),c('sample','group'))
+
+for (i in Cols){
+  if (any(! meta[[i]] %in% c(-1, 0, 1))) {
+    stop("Only -1,1,0 is allowded in the compare columns")
+    cat('\n')
+  }
+}
 
 for (i in Cols){
   samples = meta[[i]]
@@ -212,7 +220,9 @@ for (i in Cols){
 
   if (Plot == 'True'){
     missing = setdiff(gene,row.names(deg))
-    cat('Gene not in result:',missing,'\n')
+    if (length(missing) > 0 && gene != "NO"){
+      cat('Gene not in result:',missing,'\n')
+    }
     mark = intersect(gene,row.names(deg))
     deg$label <- ifelse(row.names(deg) %in% mark, row.names(deg), NA)
     draw_volcano(deg,mark,pvalue_t,logFC_t,width,height,output_dir)

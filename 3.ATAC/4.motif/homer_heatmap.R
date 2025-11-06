@@ -15,6 +15,10 @@ homers = args[3]
 width=as.numeric(args[4])
 height=as.numeric(args[5])
 
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+
 homer_filter_final = data.frame()
 for (file in input_file$dir){
   homer = fread(file.path(file,'knownResults.txt'))
@@ -88,12 +92,13 @@ row.names(matrix_tag) = matrix_tag$TF_Family
 matrix_tag = matrix_tag[, colnames(matrix_tag) != "TF_Family"]
 
 ###########
-colnames(matrix_logp) = input_file$sample[as.numeric(colnames(matrix_logp))]
+final_order = as.numeric(colnames(matrix_logp))
+colnames(matrix_logp) = input_file$sample[final_order]
 row_groups = sub(".*\\((.*)\\).*", "\\1", rownames(matrix_logp))
-if (length(levels(factor(input_file$group)))==1){
+if (length(levels(factor(input_file$cluster)))==1){
   column_split = NULL
 }else{
-  column_split = input_file$group
+  column_split = input_file$cluster[final_order]
 }
 
 pdf(file.path(output_dir,'homer_heatmap.pdf'),width=width,height=height)

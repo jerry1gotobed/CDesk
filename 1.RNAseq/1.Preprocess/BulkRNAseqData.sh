@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 config_json=$CDesk_config
-SCRIPT_DIR=$(dirname $(realpath $0))
+SCRIPT_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 
 show_help() {
     echo "Usage: BulkRNAseqData.sh [OPTIONS]"
@@ -10,12 +10,11 @@ show_help() {
     echo "  -i INPUT_DIRECTORY	Specify the absolute directory of input file (fastq.gz), the ending does not require a '/'"
     echo "  -o OUTPUT_DIRECTORY	Specify the absolute directory of output file, the ending does not require a '/'"
     echo "  -p INT		Specify number of threads (default is 8)"
-    echo "  -l 1 or 2		1:Single sequencing, 2:Pair sequencing (default is 2)"
 }
 
 # Check whether the tools are available
 # Software required
-tools=("jq" "hisat2" "stringtie" "samtools" "trim_galore" "fastqc" "multiqc" "gfold")
+tools=("jq" "hisat2" "samtools" "trim_galore" "fastqc" "multiqc" "gfold")
 missing_tools=()
 echo "Checking required tools..."
 for tool in "${tools[@]}"; do
@@ -32,7 +31,6 @@ else
 fi
 
 THREAD=8
-LAYOUT=2
 
 while getopts ":hs:i:o:p:l:" opt; do
     case ${opt} in
@@ -52,14 +50,6 @@ while getopts ":hs:i:o:p:l:" opt; do
         p )
             THREAD=${OPTARG}
             ;;
-        l )
-            LAYOUT=${OPTARG}
-            if [[ "$LAYOUT" != "1" && "$LAYOUT" != "2" ]]; then
-                echo "Invalid value for -l: $LAYOUT. It must be 1 or 2." 1>&2
-                show_help
-                exit 1
-            fi
-            ;;
         \? )
             echo "Invalid option: -$OPTARG" 1>&2
             show_help
@@ -76,7 +66,7 @@ done
 # Parameters check
 if [ -z "$INPUT_DIRECTORY" ] || [ -z "$SPECIES" ] || [ -z "$OUTPUT_DIRECTORY" ]; then
     echo "Error: INPUT_DIRECTORY, OUTPUT_DIRECTORY and SPECIES must be provided."
-    show_helpTRIM_GALORE=$
+    show_help
     exit 1
 fi
 
@@ -109,7 +99,7 @@ if [ -z "$RSeQC_bed" ]; then
     exit 1
 fi
 
-if ! ls "${mapping_index}"*.ht2 1> /dev/null 2>&1; then
+if ! ls "${mapping_index}"*.ht* 1> /dev/null 2>&1; then
   echo "HISAT2 index files are missing. Please check the index path."
 fi
 if [ ! -f "$mapping_gtf" ]; then
@@ -126,20 +116,14 @@ if [ ! -f "$RSeQC_bed" ]; then
 fi
 
 # Grab the fq files name
-if [ "$LAYOUT" = "1" ]; then
-    file_elist=$(ls "$INPUT_DIRECTORY"/*.fastq.gz 2>/dev/null | sed 's/.fastq.gz//' | sort -u)
-    fqlist=$(ls "$INPUT_DIRECTORY"/*.fq.gz 2>/dev/null | sed 's/.fq.gz//' | sort -u)
-    file_list=$(echo "$file_elist $fqlist" | tr ' ' '\n' | sort -u)
-elif [ "$LAYOUT" = "2" ]; then
-    file_elist=$(ls "$INPUT_DIRECTORY"/*.fastq.gz 2>/dev/null | sed 's/_1.fastq.gz//;s/_2.fastq.gz//' | sort -u)
-    fqlist=$(ls "$INPUT_DIRECTORY"/*.fq.gz 2>/dev/null | sed 's/_1.fq.gz//;s/_2.fq.gz//' | sort -u)
-    file_list=$(echo "$file_elist $fqlist" | tr ' ' '\n' | sort -u)
-fi
+file_list_single=$(ls "$INPUT_DIRECTORY"/*_single.{fastq,fq}.gz 2>/dev/null | sed 's/_single.fastq.gz//;s/_single.fq.gz//' | sort -u)
+file_list=$(ls "$INPUT_DIRECTORY"/*_{1,2}.{fastq,fq}.gz 2>/dev/null | sed 's/_1.fastq.gz//;s/_2.fastq.gz//;s/_1.fq.gz//;s/_2.fq.gz//' | sort -u)
 
 log_path="${OUTPUT_DIRECTORY}/Log"
 bam_path="${OUTPUT_DIRECTORY}/Bam"
 QC_path="${OUTPUT_DIRECTORY}/QC"
 Expression_path="${OUTPUT_DIRECTORY}/Expression"
+gfold_path="${Expression_path}/gfold"
 
 if [ ! -d "${OUTPUT_DIRECTORY}" ]; then
     mkdir -p ${OUTPUT_DIRECTORY}
@@ -156,53 +140,52 @@ fi
 if [ ! -d "${Expression_path}" ]; then
     mkdir -p ${Expression_path}
 fi
+if [ ! -d "${gfold_path}" ]; then
+    mkdir -p ${gfold_path}
+fi
 
 get_time(){
     printf "%-19s" "`date +\"%Y-%m-%d %H:%M:%S\"`"
 }
 
+cp ${INPUT_DIRECTORY}/*.bam ${bam_path}
+
+echo "--------------------------------------------INITIALIZING----------------------------------------------" 
+echo "RNA-seq data analysis pipeline is now running..."
+echo "Number of threads ---------- ${THREAD}" 
+echo "Directory of data ---------- ${INPUT_DIRECTORY}"
+echo "Directory of result ---------- ${OUTPUT_DIRECTORY}"
+echo "Mapping index ---------- ${mapping_index}"
+echo "Mapping gtf ---------- ${mapping_gtf}"
+echo "RSeQC bed ---------- ${RSeQC_bed}"
 
 ####################################################################################################
 #################################          ANALYSIS STEPS           ################################
 ####################################################################################################
-echo "Check available bam files"
-
-find "$INPUT_DIRECTORY" -maxdepth 1 -name "*.bam" -exec sh -c '
-    bam_file="$1"
-    bam_dir="$2"
-    sample=$(basename "$bam_file" .bam)
-    target="${bam_dir}/${sample}.bam"
-
-    if [ ! -e "$target" ]; then
-        if ln "$bam_file" "$target" 2>/dev/null; then
-            echo "Linked $bam_file -> $target"
-        else
-            cp "$bam_file" "$target"
-            echo "Copy $bam_file -> $target"
-        fi
-
-        # Check
-        if ! "$3" quickcheck -q "$target"; then
-            echo "BAM file checking error, might have to process: $target"
-            rm "$target"
-        fi
-    fi
-' sh {} "$bam_path" "samtools" \;
-
 echo "---------------------------------------Process fq files-----------------------------------------------------"
 counter=0
 
+touch ${log_path}/fastqc_multiqc.log 
+echo '' > ${log_path}/fastqc_multiqc.log 
+
+# Paired
 for FILE in $file_list; do
     counter=$((counter + 1))
     SAMPLE_PREFIX=$(basename ${FILE})
     BAM_FILE="${bam_path}/${SAMPLE_PREFIX}.bam"
     echo " "
     echo "----------------------------Number ${counter} fq sample: ${SAMPLE_PREFIX}--------------------------"
-    echo "-----------------------------------------------------------------------------------------------------"
 
-    if [ -f "$BAM_FILE" ]; then
+    if [ -f "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" ] && samtools quickcheck -q "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam"; then
         echo "Available BAM file checked，skip mapping"
+        if ln "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" "${bam_path}/${SAMPLE_PREFIX}.bam" 2>/dev/null; then
+            echo "Linked ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam -> ${bam_path}/${SAMPLE_PREFIX}.bam"
+        else
+            cp "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" "${bam_path}/${SAMPLE_PREFIX}.bam"
+            echo "Copy ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam -> ${bam_path}/${SAMPLE_PREFIX}.bam"
+        fi
         SKIP_MAPPING=true
+        BAM_FILE="${bam_path}/${SAMPLE_PREFIX}.bam"
     else
         echo "No available BAM file checked，do mapping"
         SKIP_MAPPING=false
@@ -212,131 +195,145 @@ for FILE in $file_list; do
     R1_FILE_NAME=""
     R2_FILE_NAME=""
 
-    if [ "${LAYOUT}" == "1" ]; then
-        # Check according fq file
-        if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
-            if [ -e "${FILE}.fastq.gz" ]; then
-                FILE_NAME="${FILE}.fastq.gz"
-            else
-                FILE_NAME="${FILE}.fq.gz"
-            fi
-        else
-            echo "Error：Can not find ${SAMPLE_REFIX} sample fq fiile, skip"
-            continue
-        fi
-    elif [ "${LAYOUT}" == "2" ]; then
-        # Check according fq file
-        if [ -e "${FILE}_1.fastq.gz" ] && [ -e "${FILE}_2.fastq.gz" ]; then
-            R1_FILE_NAME="${FILE}_1.fastq.gz"
-            R2_FILE_NAME="${FILE}_2.fastq.gz"
-	    FILE_TYPE="fastq"
-        elif [ -e "${FILE}_1.fq.gz" ] && [ -e "${FILE}_2.fq.gz" ]; then
-            R1_FILE_NAME="${FILE}_1.fq.gz"
-            R2_FILE_NAME="${FILE}_2.fq.gz"
-	    FILE_TYPE="fq"
-        else
-            echo "Error: Can not find ${SAMPLE_REFIX} 2 fq files, skip"
-            continue
-        fi
+    # Check according fq file
+    if [ -e "${FILE}_1.fastq.gz" ] && [ -e "${FILE}_2.fastq.gz" ]; then
+        R1_FILE_NAME="${FILE}_1.fastq.gz"
+        R2_FILE_NAME="${FILE}_2.fastq.gz"
+    FILE_TYPE="fastq"
+    elif [ -e "${FILE}_1.fq.gz" ] && [ -e "${FILE}_2.fq.gz" ]; then
+        R1_FILE_NAME="${FILE}_1.fq.gz"
+        R2_FILE_NAME="${FILE}_2.fq.gz"
+    FILE_TYPE="fq"
+    else
+        echo "Error: Can not find ${SAMPLE_REFIX} 2 fq files, skip"
+        continue
     fi
 
     echo " "
-    echo "120 `get_time` fastqc ..."
-    echo " "
+    echo "`get_time` fastqc ..."
     if [[ "${FILE_TYPE}" == "fastq" ]]; then
-        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz >> ${log_path}/fastqc_multiqc.log 2>&1
     elif [[ "${FILE_TYPE}" == "fq" ]]; then
-        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz >> ${log_path}/fastqc_multiqc.log 2>&1
     fi
 
     if [ "$SKIP_MAPPING" = false ]; then
-        echo " "
-        echo "--------------------------------------------INITIALIZING----------------------------------------------" 
-        echo "RNA-seq data analysis pipeline is now running..."
-        echo "Number of threads ---------- ${THREAD}" 
-        echo "Directory of data ---------- ${INPUT_DIRECTORY}"
-        echo "Directory of result ---------- ${OUTPUT_DIRECTORY}"
-        echo "Name of sample ---------- ${SAMPLE_PREFIX}"
-        echo "File of data ---------- ${FILE_NAME}"
-        echo "File of R1 data ---------- ${R1_FILE_NAME}"
-        echo "File of R2 data ---------- ${R2_FILE_NAME}"
-        echo "Method of sequencing ---------- ${LAYOUT}"
-        echo "Mapping index ---------- ${mapping_index}"
-        echo "Mapping gtf ---------- ${mapping_gtf}"
-        echo "GFOLD gtf ---------- ${gfold_gtf}"
-        echo "RSeQC bed ---------- ${RSeQC_bed}"
-        echo "----------------------------------INITIALIZATION FINISHED-------------------------------------"
-        echo " "
-
-        echo " "
-        echo "-----------------------------------GENERATING DIRECTORY-------------------------------------" 
-        echo "Please wait, the directory for storing the results is being generated..."
-
-
-        echo "Save LOG records for all samples ---------- ${log_path}" 
-        echo "Store BAM files for all samples ---------- ${bam_path}"
-        echo "Store quality control results, including fastqc results, mapping results, and RSeQC results ---------- ${QC_path}"
-        echo "Store gene expression data, including count and fpkm versions ---------- ${Expression_path}"
-        echo "---------------------------DIRECTORY GENERATION FINISHED-----------------------------"
-        echo " "
-
-        echo " "
-        echo "---------------------------------------START ANALYZING-----------------------------------------" 
-        echo "Preparation work completed, start analysis..."
-
         # 1.mapping ----------------------------------------------------------------------------------------
         echo " "
-        echo "1.mapping..."
+        echo "Mapping ..."
         echo " "
-        if [ "${LAYOUT}" == "1" ]; then
-            echo "67 `get_time` trim_galore ..."
-            echo " "
-        trim_galore --gzip -j ${THREAD} ${FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
-        elif [ "${LAYOUT}" == "2" ]; then
-            echo "86 `get_time` trim_galore ..."
-            echo " "
+
+        echo "`get_time` trim_galore ..."
+        echo " "
         trim_galore --gzip -j ${THREAD} --paired ${R1_FILE_NAME} ${R2_FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
-        fi
 
+        echo "`get_time` hisat2 ..."
+        echo " "
+	hisat2 -p ${THREAD} --dta -x ${mapping_index} -1 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_R1_val_1.fq.gz -2 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_R2_val_2.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1
+        rm -rf ${OUTPUT_DIRECTORY}/*.fq.gz
 
-        if [ "${LAYOUT}" == "1" ]; then
-            echo "70 `get_time` hisat2 ..."
-            echo " "
-        hisat2 -p ${THREAD} --dta -x ${mapping_index} -U ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1 
-            rm -rf ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz
-        elif [ "${LAYOUT}" == "2" ]; then
-            echo "91 `get_time` hisat2 ..."
-            echo " "
-        hisat2 -p ${THREAD} --dta -x ${mapping_index} -1 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_1.fq.gz -2 ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_2.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1
-            rm -rf ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_1.fq.gz ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_val_2.fq.gz
-        fi
-
-        echo "74 & 95 `get_time` samtools view ..."
+        echo "`get_time` samtools view ..."
         echo " "
         samtools view -@ ${THREAD} -bS ${bam_path}/${SAMPLE_PREFIX}.align.sam > ${bam_path}/${SAMPLE_PREFIX}.bam
 	rm ${bam_path}/${SAMPLE_PREFIX}.align.sam
 
     else
         echo "Use available BAM: $BAM_FILE"
+    	echo " "
     fi
 
 done
-multiqc $QC_path --outdir $QC_path
+
+# Single
+for FILE in $file_list_single; do
+    counter=$((counter + 1))
+    SAMPLE_PREFIX=$(basename ${FILE})
+    BAM_FILE="${bam_path}/${SAMPLE_PREFIX}.bam"
+    echo " "
+    echo "----------------------------Number ${counter} fq sample: ${SAMPLE_PREFIX}--------------------------"
+
+    if [ -f "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" ] && samtools quickcheck -q "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam"; then
+        echo "Available BAM file checked，skip mapping"
+        if ln "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" "${bam_path}/${SAMPLE_PREFIX}.bam" 2>/dev/null; then
+            echo "Linked ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam -> ${bam_path}/${SAMPLE_PREFIX}.bam"
+        else
+            cp "${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam" "${bam_path}/${SAMPLE_PREFIX}.bam"
+            echo "Copy ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}.bam -> ${bam_path}/${SAMPLE_PREFIX}.bam"
+        fi
+        SKIP_MAPPING=true
+        BAM_FILE="${bam_path}/${SAMPLE_PREFIX}.bam"
+    else
+        echo "No available BAM file checked，do mapping"
+        SKIP_MAPPING=false
+    fi
+
+    FILE_NAME=""
+    R1_FILE_NAME=""
+    R2_FILE_NAME=""
+
+    # Check according fq file
+    if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
+        if [ -e "${FILE}.fastq.gz" ]; then
+            FILE_NAME="${FILE}.fastq.gz"
+        else
+            FILE_NAME="${FILE}.fq.gz"
+        fi
+    else
+        echo "Error：Can not find ${SAMPLE_REFIX} sample fq fiile, skip"
+        continue
+    fi
+
+    echo " "
+    echo "`get_time` fastqc ..."
+    if [[ "${FILE_TYPE}" == "fastq" ]]; then
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz >> ${log_path}/fastqc_multiqc.log 2>&1
+    elif [[ "${FILE_TYPE}" == "fq" ]]; then
+        fastqc -o ${QC_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz >> ${log_path}/fastqc_multiqc.log 2>&1
+    fi
+
+    if [ "$SKIP_MAPPING" = false ]; then
+        # 1.mapping ----------------------------------------------------------------------------------------
+        echo " "
+        echo "Mapping ..."
+        echo " "
+
+        echo "`get_time` trim_galore ..."
+        echo " "
+        trim_galore --gzip -j ${THREAD} ${FILE_NAME} --trim-n -o ${OUTPUT_DIRECTORY} --no_report_file --basename ${SAMPLE_PREFIX} > ${log_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
+
+        echo "`get_time` hisat2 ..."
+        echo " "
+        hisat2 -p ${THREAD} --dta -x ${mapping_index} -U ${OUTPUT_DIRECTORY}/${SAMPLE_PREFIX}_trimmed.fq.gz -S ${bam_path}/${SAMPLE_PREFIX}.align.sam --summary-file ${QC_path}/${SAMPLE_PREFIX}_mapping_summary.txt > ${log_path}/${SAMPLE_PREFIX}.Mapping.log 2>&1 
+        rm -rf ${OUTPUT_DIRECTORY}/*.fq.gz
+
+        echo "`get_time` samtools view ..."
+        echo " "
+        samtools view -@ ${THREAD} -bS ${bam_path}/${SAMPLE_PREFIX}.align.sam > ${bam_path}/${SAMPLE_PREFIX}.bam
+	    rm ${bam_path}/${SAMPLE_PREFIX}.align.sam
+
+    else
+        echo "Use available BAM: $BAM_FILE"
+    	echo " "
+    fi
+done
+
+multiqc $QC_path --outdir $QC_path >> ${log_path}/fastqc_multiqc.log 2>&1
 
 echo "---------------------------------------Process bam file----------------------------------------------------"
+counter=0
 file_list=$(ls "$bam_path"/*.bam 2>/dev/null | sort -u)
 for FILE in $file_list; do
-    SAMPLE_PREFIX=$(basename "$FILE" | cut -d '.' -f 1)
-    echo "Process ${FILE}"
-    
+    counter=$((counter + 1))
+    SAMPLE_PREFIX=$(basename "$FILE" .bam)
+    echo " "
+    echo "----------------------------Number ${counter} bam sample: ${SAMPLE_PREFIX}--------------------------"
+    echo " "
     # Check sort status
     if ! samtools view -H "${bam_path}/${SAMPLE_PREFIX}.bam" | grep -q "SO:coordinate"; then
         echo "Sort BAM..."
         tmp_sorted=$(mktemp)
         samtools sort -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
         mv "$tmp_sorted" "${bam_path}/${SAMPLE_PREFIX}.bam"
-    else
-        echo "BAM sorted"
     fi
 
     # Check index status
@@ -345,79 +342,52 @@ for FILE in $file_list; do
         samtools index -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam"
     fi
     
-    # 2.QC --------------------------------------------------------------------
-    echo "124 `get_time` RSeQC ..."
+    echo "`get_time` RSeQC ..."
     echo " "
-    python3.6 ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
+    $python3_6 ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
 
-    echo "---------------------------ANALYZING FINISHED-----------------------------"
+    echo "Calculate gene expression levels"
+    echo "`get_time` gfold count ..."
     echo " "
-
-    # 3.Calculate gene expression levels --------------------------------------------------------------------
-    echo " "
-    echo "2.Calculating gene expression levels ..."
-    echo " "
-    echo "116 `get_time` gfold count ..."
-    echo " "
-    samtools view -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam | gfold count -ann ${gfold_gtf} -tag stdin -o ${Expression_path}/${SAMPLE_PREFIX}.read_cnt > /dev/null 2>&1
-   
-    if [ ! -d "${Expression_path}/Stringtie" ]; then
-        mkdir -p ${Expression_path}/Stringtie
-    fi
-
-    
-    echo "160 `get_time` stringtie count ..."
-    echo " "
-    nohup stringtie ${bam_path}/${SAMPLE_PREFIX}.bam -p ${THREAD} -G ${mapping_gtf} -A ${Expression_path}/Stringtie/${SAMPLE_PREFIX}_gene_abund.tab > ${log_path}/${SAMPLE_PREFIX}.Stringtie.log 2>&1
-
+    samtools view -@ ${THREAD} ${bam_path}/${SAMPLE_PREFIX}.bam | gfold count -ann ${gfold_gtf} -tag stdin -o ${gfold_path}/${SAMPLE_PREFIX}.read_cnt > ${log_path}/${SAMPLE_PREFIX}.gfold.log 2>&1
 done
 
-echo " "
-echo "begin merge fpkm expression..."
-echo " "
+echo "`get_time` Merge expression matrix ..."
 # -------------------------------------------Merge fpkm----------------------------------------------
 # Gram the first column of the first .read_cnt to a csv file
-awk '{print $1}' $(ls ${Expression_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
+awk '{print $1}' $(ls ${gfold_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
 
 # Traverse all .read_cnt files
-for file in ${Expression_path}/*.read_cnt; do
+for file in ${gfold_path}/*.read_cnt; do
     paste -d ',' ${Expression_path}/output1.csv <(awk '{print $5}' "$file") > ${Expression_path}/temp1.csv
     mv ${Expression_path}/temp1.csv ${Expression_path}/output1.csv
 done
 
 # Add header
-echo "gene_name,$(ls ${Expression_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
+echo "gene_name,$(ls ${gfold_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
 cat ${Expression_path}/output1.csv >> ${Expression_path}/temp1.csv
 
 # Get merged_fpkm
 mv ${Expression_path}/temp1.csv ${Expression_path}/merged_fpkm.csv
-
 rm -rf ${Expression_path}/output1.csv
-echo " "
-echo "fpkm expression has been merged..."
-echo " "
 
-echo " "
-echo "begin merge counts expression..."
-echo " "
 # -------------------------------------------Merge count----------------------------------------------
 # Gram the first column of the first .read_cnt to a csv file
-awk '{print $1}' $(ls ${Expression_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
+awk '{print $1}' $(ls ${gfold_path}/*.read_cnt | head -n 1) >> ${Expression_path}/output1.csv
 
 # Traverse all .read_cnt files
-for file in ${Expression_path}/*.read_cnt; do
+for file in ${gfold_path}/*.read_cnt; do
     paste -d ',' ${Expression_path}/output1.csv <(awk '{print $3}' "$file") > ${Expression_path}/temp1.csv
     mv ${Expression_path}/temp1.csv ${Expression_path}/output1.csv
 done
 
 # Add header
-echo "gene_name,$(ls ${Expression_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
+echo "gene_name,$(ls ${gfold_path}/*.read_cnt | xargs -n 1 basename | sed 's/.read_cnt//;s/^/,/' | tr -d '\n' | sed 's/^,//')" > ${Expression_path}/temp1.csv
 cat ${Expression_path}/output1.csv >> ${Expression_path}/temp1.csv
 
 # Get merged_count
 mv ${Expression_path}/temp1.csv ${Expression_path}/merged_count.csv
-
 rm -rf ${Expression_path}/output1.csv
 echo " "
-echo "counts expression has been merged..."
+echo "Expression matrix has been merged..."
 echo "Preprocess Done"

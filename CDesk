@@ -44,184 +44,216 @@ except Exception as e:
 CDesk_envs = {}
 CDesk_env = os.environ.copy()
 # CDesk,CDesk_R,CDesk_py3.7,CDesk_py2.7
+CDesk_env['python3_7'] = 'python';CDesk_env['python3_6']='python'
 for env in ['CDesk','CDesk_py3.7','CDesk_py2.7','CDesk_R']:
     if env in list(conda_envs.keys()):
         CDesk_envs[env] = os.path.join(conda_envs[env],'bin')
         CDesk_env[env] = os.path.join(conda_envs[env],'bin')
+        if env == 'CDesk':
+            CDesk_env['python3_6'] ='python3.6'
+        if env == 'CDesk_py3.7':
+            CDesk_env['python3_7'] ='python3.7'
         print(f'Load {env} from conda environment: {conda_envs[env]}')
     elif env in list(mamba_envs.keys()):
         CDesk_envs[env] = os.path.join(mamba_envs[env],'bin')
         CDesk_env[env] = os.path.join(mamba_envs[env],'bin')
+        if env == 'CDesk':
+            CDesk_env['python3_6'] ='python3.6'
+        if env == 'CDesk_py3.7':
+            CDesk_env['python3_7'] ='python3.7'
         print(f'Load {env} from mamba environment: {mamba_envs[env]}')
     elif os.path.exists(os.path.join(config['conda_env'][env])):
         CDesk_envs[env] = os.path.join(config['conda_env'][env],'bin')
         CDesk_env[env] = os.path.join(config['conda_env'][env],'bin')
         print(f"Load {env} from {config_path}: {config['conda_env'][env]}")
+        if env == 'CDesk':
+            CDesk_env['python3_6'] ='python3.6'
+        if env == 'CDesk_py3.7':
+            CDesk_env['python3_7'] ='python3.7'
     else:
         CDesk_envs[env] = ''
+        CDesk_env[env] = ''
         print(f'Fail to load {env} environment, use the default environment')
 
 extra_path = os.pathsep.join(CDesk_envs[env] for env in ['CDesk_R','CDesk','CDesk_py3.7','CDesk_py2.7'] if CDesk_envs[env])
 
+CDesk_env["CDesk_config"] = config_path
+
 if extra_path:
     CDesk_env['PATH'] = extra_path + os.pathsep + CDesk_env['PATH']
-
-CDesk_env["CDesk_config"] = config_path
 
 print('——————————————————————————————CDesk environment ready——————————————————————————————')
 
 # bulkRNA 1. Preprocess
-def bulkRNA_preprocess(args):
+def bulkRNA_preprocess(args): 
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+
+    python_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','data.py')
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
     bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqData.sh')
-    args.i = args.i.rstrip('/');args.o = args.o.rstrip('/')
-    cmd = [bash_script,'-s', args.species, '-i', args.i, '-o', args.o, '-p', str(args.thread), '-l', str(args.l)]
+    cmd = [bash_script,'-s', args.species, '-i', os.path.join(args.output,'data'), '-o', args.output, '-p', str(args.thread)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
     if args.bw:
         bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqBW.sh')
-        cmd = [bash_script, '-i', f"{args.o}/Bam", '-o', f"{args.o}/BW", '-p', str(args.thread)]
+        cmd = [bash_script, '-i', f"{args.output}/Bam", '-o', f"{args.output}/BW", '-p', str(args.thread)]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
     if args.te:
         bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqTE.sh')
-        cmd = [bash_script, '-i', f"{args.o}/Bam", '-o', f"{args.o}/TE", '-p', str(args.thread),'-s',args.species,'-t',args.te_gene]
+        cmd = [bash_script, '-i', f"{args.output}/Bam", '-o', f"{args.output}/TE", '-p', str(args.thread),'-s',args.species]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA 2. QC
 def bulkRNA_QC(args):
     R_script = os.path.join(root_dir,'1.RNAseq','2.QC','QC.R')
-    args.o = args.o.rstrip('/')
-    cmd = ['Rscript', R_script,args.i,args.o,args.group,str(args.batch),str(args.width),str(args.height)]
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.group = args.group.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.group = os.path.abspath(args.group)
+    cmd = ['Rscript', R_script,args.input,args.output,args.group,str(args.batch),str(args.width),str(args.height)]
     subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA 3. DEG
 def bulkRNA_DEG(args):
     python_script = os.path.join(root_dir,'1.RNAseq','3.DEGD','gfold.py')
-    args.o = args.o.rstrip('/')
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     if args.DEG_mode != 'gfold':
+        args.group = args.group.rstrip('/');args.group = os.path.abspath(args.group)
         R_script = os.path.join(root_dir,'1.RNAseq','3.DEGD','degd.R')
         cmd = [
             'Rscript', R_script,args.DEG_mode,
-            args.i, args.o,args.m,str(args.p),args.gene,str(args.fc),
+            args.input, args.output,args.group,str(args.p),args.gene,str(args.fc),
             str(args.pval),str(args.top_num),str(args.width),str(args.height)
         ]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.DEG_mode == 'gfold':
+        cmd = [
+                CDesk_env['python3_7'], python_script,
+                "--species",args.species,"--output_dir",args.output,
+                "--meta_file",args.input,"--top_genes",str(args.top_num),
+                "--gene_of_interest",args.gene,"--fc_threshold",str(args.gfold),
+                "--thread",str(args.thread),"--width",str(args.width),"--height",str(args.height)
+        ]
         if args.p:
-            cmd = [
-                'python3.7', python_script,
-                "--input_dir",args.i,"--species",args.s,"--readcnt",args.readcnt,"--output_dir",args.o,
-                "--meta_file",args.m,"--plot","--top_genes",str(args.top_num),
-                "--gene_of_interest",args.gene,"--fc_threshold",str(args.gfold),
-                "--thread",str(args.t),"--width",str(args.width),"--height",str(args.height),'--config_path',config_path
-            ]
-            subprocess.run(cmd, check=True,env=CDesk_env)
-        else:
-            cmd = [
-                'python3.7', python_script, 
-                "--input_dir",args.i,"--species",args.s,"--readcnt",args.readcnt,"--output_dir",args.o,
-                "--meta_file",args.m,"--top_genes",str(args.top_num),
-                "--gene_of_interest",args.gene,"--fc_threshold",str(args.gfold),
-                "--thread",str(args.t),"--width",str(args.width),"--height",str(args.height),'--config_path',config_path
-            ]
-            subprocess.run(cmd, check=True,env=CDesk_env)
+            cmd = cmd + ['--plot']
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA 4. enrich analysis
 def bulkRNA_enrich(args):
-    R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_analysis.R')
-    if args.enrich_mode == 'custom':
-        args.o = args.o.rstrip('/')
-        R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_analysis_customer.R')
-        cmd = [
-            "Rscript", R_script, 
-            args.i, args.custom, args.o,str(args.width), str(args.height)
-        ]
+    if args.enrich_mode == 'analyze':
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+        R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_analysis.R')
+        if args.type == 'multi':
+            R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_multi.R')
+        if args.species == 'no' and args.custom == 'no':
+            print('At least provide species or custom file!')
+            sys.exit(1)
+        if args.custom != 'no':
+            args.custom = args.custom.rstrip('/');args.custom = os.path.abspath(args.custom)
+        cmd = ["Rscript", R_script,args.input,args.custom,args.species,args.output,str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
-    elif args.enrich_mode == 'GO':
-        cmd = [
-            "Rscript", R_script, 
-            args.i, 'GO', args.species, str(args.t), args.o,str(args.width),str(args.height)
-        ]
-        subprocess.run(cmd, check=True,env=CDesk_env)
-    elif args.enrich_mode == 'KEGG':
-        args.o = args.o.rstrip('/')
-        cmd = [
-            "Rscript", R_script, 
-            args.i, 'KEGG', args.species, args.o,str(args.width),str(args.height)
-        ]
+    elif args.enrich_mode == 'plot':
+        R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_plot.R')
+        if args.type == 'multi':
+            R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','enrichment_multi_plot.R')
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+        cmd = ["Rscript", R_script, args.input,args.output,str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.enrich_mode == 'GSEA': 
         R_script = os.path.join(root_dir,'1.RNAseq','4.enrich','gsea.R')
-        args.o = args.o.rstrip('/')
-        cmd = ['Rscript',R_script,args.i,args.path,args.s,args.cols,args.o,str(args.width),str(args.height)]
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+        cmd = ['Rscript',R_script,args.input,args.path,args.species,args.cols,args.output,str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA 5. Similarity Analysis
 def bulkRNA_Similarity(args):
     R_script = os.path.join(root_dir,'1.RNAseq','5.SimilarityAnalysis','Similarity.R')
-    args.o = args.o.rstrip('/')
-    cmd = ['Rscript',R_script,args.sample1,args.sample2,args.group,args.o,args.gene,args.batch,str(args.plot_width),str(args.plot_height)]
+    args.output = args.output.rstrip('/');args.input = args.input.rstrip('/');args.group = args.group.rstrip('/')
+    args.output = os.path.abspath(args.output);args.input = os.path.abspath(args.input);args.group = os.path.abspath(args.group)
+    cmd = ['Rscript',R_script,args.input,args.group,args.output,args.gene,args.batch,str(args.width),str(args.height)]
     subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA: 6. Clustering
 def bulkRNA_Clustering(args):
     if args.cluster_mode == 'WGCNA':
         R_script = os.path.join(root_dir,'1.RNAseq','6.Clustering','WGCNA.R')
-        args.o = args.o.rstrip('/')
-        cmd = ['Rscript', R_script,args.count_file,args.pheno_file,args.trait,args.o]
+        args.output = args.output.rstrip('/');args.input = args.input.rstrip('/');args.pheno = args.pheno.rstrip('/')
+        args.output = os.path.abspath(args.output);args.input = os.path.abspath(args.input);args.pheno = os.path.abspath(args.pheno)
+        cmd = ['Rscript', R_script,args.input,args.pheno,args.trait,args.output]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.cluster_mode == 'kmean':
         R_script = os.path.join(root_dir,'1.RNAseq','6.Clustering','Kmeans.R')
-        args.o = args.o.rstrip('/'); args.i = args.i.rstrip('/')
-        cmd = ['Rscript', R_script,args.i,args.group,args.o,str(args.cluster),args.method,
+        args.output = args.output.rstrip('/'); args.input = args.input.rstrip('/');args.group = args.group.rstrip('/')
+        args.output = os.path.abspath(args.output);args.input = os.path.abspath(args.input);args.group = os.path.abspath(args.group)
+        if args.gene != 'no':
+            args.gene = args.gene.rstrip('/');args.gene = os.path.abspath(args.gene)
+        cmd = ['Rscript', R_script,args.input,args.group,args.output,str(args.cluster),args.method,
                str(args.height),str(args.width),args.gene]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
 # bulkRNA 7. AlternativeSplicingDetection
 def bulkRNA_AlternativeSpliceDetection(args):
+    args.output = args.output.rstrip('/');args.b1 = args.b1.rstrip('/');args.b2 = args.b2.rstrip('/')
+    args.output = os.path.abspath(args.output);args.b1 = os.path.abspath(args.b1);args.b2 = os.path.abspath(args.b2)
     if args.Splice_mode == 'detect':
         python_script = os.path.join(root_dir,'1.RNAseq','7.AlternativeSplicingDetection','alternative_splicing.py')
-        cmd = ["python3.6", python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
+        cmd = ["CDesk_env['python3_6']", python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
                 "--type",args.type,"-t",str(args.thread),'--length',str(args.length),
                 '--variable_read_length',str(args.variable_read_length),'--allow_clipping',str(args.allow_clipping)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.Splice_mode == 'draw':
         python_script = os.path.join(root_dir,'1.RNAseq','7.AlternativeSplicingDetection','draw_sashimiplot.py')
-        cmd = ["python3.7", python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
+        cmd = [CDesk_env['python3_7'], python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
                 "--region",args.region,"--group",args.group,
                 '--exon_s',str(args.exon_s),'--intron_s',str(args.intron_s)]
         subprocess.run(cmd,check=True,env=CDesk_env)
 
 # scRNA 1. preprocess
 def scRNA_preprocess(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+    
     python_script = os.path.join(root_dir,'2.scRNA','1.preprocess','preprocess.py')    
-    bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqData.sh')
     if args.scRNA_preprocess_mode != 'smartseq':
-        cmd = ["python3.7", python_script,args.scRNA_preprocess_mode,'-i',args.i,'-o',args.o,'-s',args.s,'-t',str(args.t),'--config',config_path]
-        subprocess.run(cmd,check=True)
+        cmd = [CDesk_env['python3_7'], python_script,args.scRNA_preprocess_mode,'-i',args.input,'-o',args.output,'-s',args.species,'-t',str(args.thread)]
+        subprocess.run(cmd,check=True,env=CDesk_env)
     elif args.scRNA_preprocess_mode == 'smartseq':
-        args.i = args.i.rstrip('/');args.o = args.o.rstrip('/')
-        cmd = [bash_script,'-s', args.s, '-i', args.i, '-o', args.o, '-p', str(args.t), '-l', str(args.l),config_path]
-        subprocess.run(cmd,check=True)
+        python_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','data.py')
+        cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
+        subprocess.run(cmd,check=True,env=CDesk_env)
+
+        bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqData.sh')
+        cmd = [bash_script,'-s', args.species, '-i', os.path.join(args.output,'data'), '-o', args.output, '-p', str(args.thread)]
+        subprocess.run(cmd,check=True,env=CDesk_env)
+
         if args.bw:
             bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqBW.sh')
-            cmd = [bash_script, '-i', f"{args.o}/Bam", '-o', f"{args.o}/BW", '-p', str(args.t),config_path]
-            subprocess.run(cmd, check=True)
+            cmd = [bash_script, '-i', f"{args.output}/Bam", '-o', f"{args.output}/BW", '-p', str(args.thread)]
+            subprocess.run(cmd, check=True,env=CDesk_env)
+
         if args.te:
             bash_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','BulkRNAseqTE.sh')
-            cmd = [bash_script, '-i', f"{args.o}/Bam", '-o', f"{args.o}/TE", '-p', str(args.t),'-s',args.s,'-t',args.te_gene,config_path]
-            subprocess.run(cmd, check=True)
+            cmd = [bash_script, '-i', f"{args.output}/Bam", '-o', f"{args.output}/TE", '-p', str(args.thread),'-s',args.species]
+            subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA 2. cluster
 def scRNA_cluster(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     python_script = os.path.join(root_dir,'2.scRNA','2.clustering','clustering.py')
     R_script = os.path.join(root_dir,'2.scRNA','2.clustering','clustering.R')
     if args.mode == 'scanpy':
         cmd = [
-        'python3.7', python_script,
-        '-i', args.i,
-        '-o', args.o,
-        '-n', args.n,
+        CDesk_env['python3_7'], python_script,
+        '-i', args.input,
+        '-o', args.output,
+        '-n', args.name,
         '--min_cells', str(args.min_cells),
         '--min_features', str(args.min_features),
         '--nFeature_RNA_min', str(args.nFeature_RNA_min),
@@ -229,15 +261,17 @@ def scRNA_cluster(args):
         '--mt_percent', str(args.mt_percent),
         '--variable_features', str(args.variable_features),
         '--dim_prefer', str(args.dim_prefer),
-        '--res', str(args.res)
+        '--res', str(args.res),
+        '--width',str(args.width),
+        '--height',str(args.height)
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.mode == 'seurat':
         cmd = [
         'Rscript', R_script,
-        args.i,
-        args.o,
-        args.n,
+        args.input,
+        args.output,
+        args.name,
         str(args.min_cells),
         str(args.min_features),
         str(args.nFeature_RNA_min),
@@ -245,182 +279,214 @@ def scRNA_cluster(args):
         str(args.mt_percent),
         str(args.variable_features),
         str(args.dim_prefer),
-        str(args.res)
+        str(args.res),str(args.width),str(args.height)
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 3. Annotation
 def scRNA_annotation(args):
     R_script = os.path.join(root_dir,'2.scRNA','3.annotation','scRNAseqAnno.R')
     if args.scRNA_annotation_mode == 'marker':
-        cmd = ['Rscript',R_script,'marker',args.i,args.marker,args.meta,args.o,str(args.expression_thre),
-               str(args.percentage_thre),str(args.marker_thre),args.cluster]
-        subprocess.run(cmd, check=True)
+        cmd = ['Rscript',R_script,'marker',args.input,args.marker,args.meta,args.output,str(args.expression_thre),
+               str(args.percentage_thre),str(args.marker_thre),args.cluster,str(args.width),str(args.height)]
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_annotation_mode == 'transfer':
-        cmd = ['Rscript',R_script,'transfer',args.ref,args.query,args.meta,args.o,args.cluster,
-               str(args.nfeatures),str(args.dims)]
-        subprocess.run(cmd, check=True)
+        cmd = ['Rscript',R_script,'transfer',args.ref,args.query,args.meta,args.output,args.cluster,
+               str(args.nfeatures),str(args.dims),str(args.width),str(args.height)]
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA 4. marker
 def scRNA_marker(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     if args.scRNA_marker_mode == 'all':
         R_script = os.path.join(root_dir,'2.scRNA','4.marker','findAllMarkers.R')
         cmd = [
             "Rscript", R_script,
-            args.i, args.meta,str(args.f), str(args.p),str(args.m), args.o,str(args.width),str(args.height)
+            args.input, args.meta,str(args.fc), str(args.p),str(args.m), args.output,str(args.width),str(args.height)
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_marker_mode == '2group':
         R_script = os.path.join(root_dir,'2.scRNA','4.marker','marker_in_2_group.R')
         cmd = [
             "Rscript", R_script,
-            '-i',args.i,'-g',args.meta ,'-t',args.type1,'-e',args.type2,
-            '-f',str(args.f), '--adjPvalFilter',str(args.p),'-m',str(args.m),'-o',args.o
+            '-i',args.input,'-g',args.meta ,'-t',args.type1,'-e',args.type2,
+            '-f',str(args.fc), '--adjPvalFilter',str(args.p),'-m',str(args.m),'-o',args.output,
+            '--width',str(args.width),'--height',str(args.height)
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 5. trajectory
 def scRNA_trajectory(args):
     if args.scRNA_trajectory_mode == 'monocle':
         R_script = os.path.join(root_dir,'2.scRNA','5.trajectory','monocle3.R')
         cmd = ['Rscript',R_script,args.i,args.o,args.m,args.s,str(args.width),str(args.height)]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_trajectory_mode == 'diffusion':
         R_script = os.path.join(root_dir,'2.scRNA','5.trajectory','diffusionmap.R')
         cmd = ['Rscript',R_script,args.i,args.o,args.m,args.s,str(args.width),str(args.height)]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_trajectory_mode == 'velocity':
         python_script = os.path.join(root_dir,'2.scRNA','5.trajectory','velocity.py')
-        cmd = ['python3.7',python_script,'--cellranger_output',args.cellranger,
+        cmd = [CDesk_env['python3_7'],python_script,'--cellranger_output',args.cellranger,
                '--rds_file',args.rds,'--gtf',args.gtf,'--genes',args.genes,'-o',args.o,
-               '--meta',args.meta,'--width',str(args.width),'--height',str(args.height),'--config',config_path,'-t',str(args.t)]
-        subprocess.run(cmd, check=True)
+               '--meta',args.meta,'--width',str(args.width),'--height',str(args.height),'-t',str(args.t)]
+        subprocess.run(cmd, check=True,env=CDesk_env)
         figures_dir = os.path.join(os.getcwd(),'figures')
         if os.path.exists(figures_dir) and os.path.isdir(figures_dir):
             shutil.rmtree(figures_dir)
     elif args.scRNA_trajectory_mode == 'cstreet':
         python_script = os.path.join(root_dir,'2.scRNA','5.trajectory','cstreet.py')
-        cmd = ['python3.7',python_script,'-i',args.i,'-s',args.s,'-n',args.n,'-o',args.o,'--config',config_path]
-        subprocess.run(cmd, check=True)
+        cmd = [CDesk_env['python3_7'],python_script,'-i',args.i,'-s',args.s,'-n',args.n,'-o',args.o]
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 6. similarity
 def scRNA_similarity(args):
     R_script = os.path.join(root_dir,'2.scRNA','6.similarity','correlation.R')
     cmd = ['Rscript',R_script,args.sample1,args.sample2,args.meta1,args.meta2,args.type1,args.type2,args.o,str(args.nfeatures_used),str(args.integrate_features),str(args.width),str(args.height)]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 7. interaction
 def scRNA_interaction(args):
     if args.scRNA_interaction_mode == 'cellchat':
         R_script = os.path.join(root_dir,'2.scRNA','7.interaction','cellchat.R')
         cmd = ['Rscript',R_script,'--seurat_file',args.i,"--output_directory",args.o,"--threads",str(args.t),"--species",args.species,"--group_by",args.group,"--width",str(args.width),"--height",str(args.height)]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_interaction_mode == 'pyscenic':
         python_script = os.path.join(root_dir,'2.scRNA','7.interaction','GRN.py')
-        cmd = ['python3.7',python_script,'-i',args.i,'-o',args.o,"--tf-list",args.tf,"--db-folder",args.db,"--species",args.species,"--num-workers",str(args.t),"--auc-threshold",str(args.auc),"--nes-threshold",str(args.nes),'--normalize',str(args.normalize),'--scale',str(args.scale),'--log',str(args.log),'--top_regulons',str(args.top_regulons),'--top_targets',str(args.top_targets),'--plot_tf',str(args.plot_tf),'--config',config_path]
-        subprocess.run(cmd, check=True)
+        cmd = [CDesk_env['python3_7'],python_script,'-i',args.i,'-o',args.o,"--tf-list",args.tf,"--db-folder",args.db,"--species",args.species,"--num-workers",str(args.t),"--auc-threshold",str(args.auc),"--nes-threshold",str(args.nes),'--normalize',str(args.normalize),'--scale',str(args.scale),'--log',str(args.log),'--top_regulons',str(args.top_regulons),'--top_targets',str(args.top_targets),'--plot_tf',str(args.plot_tf)]
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 8. integrate
 def scRNA_integrate(args):
     if args.scRNA_integrate_mode == 'seurat':
         R_script = os.path.join(root_dir,'2.scRNA','8.integrate','integrate.R')
         cmd = ['Rscript',R_script,args.i,args.mode,args.o,str(args.min_cells),str(args.min_features),str(args.nfeatures_used),
-               str(args.integrate_features),str(args.pc_num),str(args.pc_reduce),str(args.max_iter_harmony),str(args.width),str(args.height)]
-        subprocess.run(cmd, check=True)
+               str(args.integrate_features),str(args.pc_num),str(args.pc_reduce),str(args.max_iter_harmony),str(args.k_anchor),str(args.width),str(args.height)]
+        subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_integrate_mode == 'bulk':
         R_script = os.path.join(root_dir,'2.scRNA','8.integrate','bulk+scRNA.R')
         cmd = ['Rscript',R_script,args.bulk,args.scRNA,args.meta,args.o,str(args.nfeatures_used),
                str(args.integrate_features),str(args.pc_num),str(args.pc_reduce),str(args.width),str(args.height)]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True,env=CDesk_env)
 
 # ATAC 1. preprocess
 def ATAC_preprocess(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+
+    python_script = os.path.join(root_dir,'3.ATAC','1.preprocess','data.py')
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
     bash_script = os.path.join(root_dir,'3.ATAC','1.preprocess','ATACseqData.sh')
-    cmd = [bash_script,'-i',args.i,'-o',args.o,'-s',args.s,'-p',str(args.t),'-l',str(args.l),'-g',args.group,config_path]
-    if args.fastqc:
-        cmd = [bash_script,'-i',args.i,'-o',args.o,'-s',args.s,'-p',str(args.t),'-l',str(args.l),'-g',args.group,'-q',config_path]
-    subprocess.run(cmd,check=True)
+    cmd = [bash_script,'-i',os.path.join(args.output,'data'),'-o',args.output,'-s',args.species,'-p',str(args.thread),'-g',args.input]
+    subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 2. QC
 def ATAC_QC(args):
     python_script = os.path.join(root_dir,'3.ATAC','2.QC','QC.py')
-    cmd = ["python3.7", python_script,'--bw',args.bw,'--species',args.species,'--bin',str(args.bin),
-           '--group',args.group,'--peak',args.peak,'--step',str(args.step),'-o',args.o,'-t',str(args.t),
-           '--width',str(args.width),'--height',str(args.height),'--config_path',config_path]
-    subprocess.run(cmd,check=True)
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'--species',args.species,'--bin',str(args.bin),
+           '--step',str(args.step),'-o',args.output,'-t',str(args.thread),'--width',str(args.width),'--height',str(args.height)]
+    subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 3. Dynamic
 def ATAC_dynamic(args):
     python_script = os.path.join(root_dir,'3.ATAC','3.dynamic','dynamic.py')
-    cmd = ["python3.7", python_script,'--file_meta',args.file_meta,'--bed_dir',args.bed_dir,'--bed_summit',args.bed_summit,
-           '--bw_dir',args.bw_dir,'--remove_cluster',args.remove_cluster,'--important_index',str(args.important_index),
-           '--species',args.species,'-o',args.o,'--config_path',config_path]
-    subprocess.run(cmd,check=True)
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+    cmd = [CDesk_env['python3_7'], python_script,'--file_meta',args.input,
+           '--remove_cluster',args.remove_cluster,'--important_index',str(args.important_index),
+           '--species',args.species,'-o',args.output]
+    subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC 4. motif
 def ATAC_motif(args):
-    if args.motif_mode =='homer_find':
+    if args.motif_mode =='homer':
         python_script = os.path.join(root_dir,'3.ATAC','4.motif','FindMotif_homer.py')
-        cmd = ["python3.7", python_script,args.i,args.o,args.species,
-                str(args.t),args.summit,config_path]
-        subprocess.run(cmd,check=True)
-    elif args.motif_mode =='meme_find':
-        bash_script = os.path.join(root_dir,'3.ATAC','4.motif','FindMotif_meme.sh')
-        cmd = [bash_script,'-i',args.i,'-o',args.o,'-s',args.species,
-                '-p',str(args.t),'-n',str(args.nmotifs),config_path]
-        subprocess.run(cmd,check=True)
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+        cmd = [CDesk_env['python3_7'], python_script,args.input,args.output,args.species,str(args.thread),args.mode,str(args.start),str(args.end)]
+        subprocess.run(cmd,check=True,env=CDesk_env)
+    elif args.motif_mode =='meme':
+        python_script = os.path.join(root_dir,'3.ATAC','4.motif','FindMotif_meme.py')
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.database=args.database.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.database=os.path.abspath(args.database)
+        cmd = [CDesk_env['python3_7'], python_script,args.input,args.database,args.output,str(args.thread),str(args.nmotifs)]
+        subprocess.run(cmd,check=True,env=CDesk_env)
     elif args.motif_mode =='homer_heatmap':
         R_script = os.path.join(root_dir,'3.ATAC','4.motif','homer_heatmap.R')
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+        if args.motif != 'no':
+            args.motif = args.motif.rstrip('/');args.motif = os.path.abspath(args.motif)
         cmd = ["Rscript",R_script,args.input,args.output,args.motif,str(args.width),str(args.height)]
         subprocess.run(cmd,check=True,env=CDesk_env)
     elif args.motif_mode =='enrich_heatmap':
         python_script = os.path.join(root_dir,'3.ATAC','4.motif','motif_enrich_heatmap.py')
-        cmd = ["python3.7", python_script,'--motif_bed',args.motif_bed,'-o',args.o,'--bed',args.bed,
-               '--motifs',args.motifs,'--tag',args.tag,'--species',args.species,"-t",str(args.t),config_path]
-        subprocess.run(cmd,check=True)
+        args.motif_bed = args.motif_bed.rstrip('/');args.output = args.output.rstrip('/');args.bed = args.bed.rstrip('/')
+        args.motif_bed = os.path.abspath(args.motif_bed);args.output = os.path.abspath(args.output);args.bed = os.path.abspath(args.bed)
+        cmd = [CDesk_env['python3_7'], python_script,'--motif_bed',args.motif_bed,'-o',args.output,'--bed',args.bed,
+               '--species',args.species,"-t",str(args.thread)]
+        subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 5. Accessbility
 def ATAC_accessbility(args):
     python_script = os.path.join(root_dir,'3.ATAC','5.accessbility','accessbility.py')
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.bw=args.bw.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.bw = os.path.abspath(args.bw)
+    if args.region_list != '':
+        args.region_list = args.region_list.rstrip('/');args.region_list = os.path.abspath(args.region_list)
     if args.mode == 'gene':
         if args.species == None:
-            print("请提供物种参数")
+            print("Please provide gene parameter for gene mode")
             sys.exit(1)
-        cmd = ["python3.7", python_script,'-bw',args.bw,'-o',args.o,'-m',args.mode,
-               '-i',args.i,'-s',args.species,'--promoter_size',str(args.promoter_size),
-               '--method',args.method,'--region_list',args.region_list,'--center',args.center,config_path]
+        cmd = [CDesk_env['python3_7'], python_script,'-bw',args.bw,'-o',args.output,'-m',args.mode,
+               '-i',args.input,'-s',args.species,'--promoter_size',str(args.promoter_size),
+               '--method',args.method,'--region_list',args.region_list,'--center',args.center]
     else:
-        cmd = ["python3.7", python_script,'-bw',args.bw,'-o',args.o,'-m',args.mode,
-               '-i',args.i,'--promoter_size',str(args.promoter_size),
-               '--method',args.method,'--region_list',args.region_list,'--center',args.center,config_path]
-    subprocess.run(cmd,check=True)
+        cmd = [CDesk_env['python3_7'], python_script,'-bw',args.bw,'-o',args.output,'-m',args.mode,
+               '-i',args.input,'--promoter_size',str(args.promoter_size),
+               '--method',args.method,'--region_list',args.region_list,'--center',args.center]
+    subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 6. IGV snapshots
 def ATAC_igv(args):
     python_script = os.path.join(root_dir,'3.ATAC','6.igv','snapshot.py')
-    cmd = ["python3.7", python_script,'-i',args.i,'-o',args.o,'--genome',args.genome,
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.region=args.region.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.region=os.path.abspath(args.region)
+    cmd = [CDesk_env['python3_6'], python_script,'-i',args.input,'-o',args.output,'--genome',args.genome,
                '--display_mode',args.display_mode,'--region',args.region,
-               '--type',args.type,config_path]
-    subprocess.run(cmd,check=True)
+               '--type',args.type]
+    subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 7. Correlation
 def ATAC_correlation(args):
     bash_script = os.path.join(root_dir,'3.ATAC','7.correlation','ATAC_data_correlation.sh')
+    args.bw1 = args.bw1.rstrip('/');args.output = args.output.rstrip('/');args.bw2 = args.bw2.rstrip('/')
+    args.bw1 = os.path.abspath(args.bw1);args.output = os.path.abspath(args.output);args.bw2 = os.path.abspath(args.bw2)
     if args.region:
-        cmd = [bash_script,args.bw_file1,args.bw_file2,
-            args.o,str(args.t),args.region,config_path]
+        args.region = args.region.rstrip('/');args.region = os.path.abspath(args.region)
+        cmd = [bash_script,args.bw1,args.bw2,
+            args.output,str(args.thread),args.region]
     else:
-        cmd = [bash_script,args.bw_file1,args.bw_file2,
-            args.o,str(args.t),config_path]
+        cmd = [bash_script,args.bw1,args.bw2,
+            args.output,str(args.thread)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 # HiC: 1. preprocess
 def HiC_preprocess(args):
-    bash_script = os.path.join(root_dir,'5.HiC','1.Preprocess','HiCData.sh')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-    cmd = [bash_script,'-i',args.input,'-o',args.output,'-s',args.species,'-t',str(args.thread),'-l',str(args.l),
-           '-f',str(args.filter),'-r',args.resolution]
+
+    python_script = os.path.join(root_dir,'5.HiC','1.Preprocess','data.py')
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
+    bash_script = os.path.join(root_dir,'5.HiC','1.Preprocess','HiCData.sh')
+    cmd = [bash_script,'-i',os.path.join(args.output,'data'),'-o',args.output,'-s',args.species,'-t',str(args.thread),'-f',str(args.filter),'-r',args.resolution]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 # HiC: 2. Correlation
@@ -428,7 +494,7 @@ def HiC_correlation(args):
     python_script = os.path.join(root_dir,'5.HiC','2.Correlation','correlation.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-    cmd = ["python3.7", python_script,'-i',args.input,'-o',args.output,'--chr',args.chr,
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output,'--chr',args.chr,
             '--inter_chrom',str(args.inter_chrom),'--width',str(args.width),'--height',str(args.height)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
@@ -437,7 +503,7 @@ def HiC_matrix(args):
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     python_script = os.path.join(root_dir,'5.HiC','3.Matrix','matrix.py')
-    cmd = ["python3.7", python_script,'-i',args.input,'-o',args.output,'--inputFormat',args.inputFormat,
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output,'--inputFormat',args.inputFormat,
                '--outputFormat',args.outputFormat,'-t',str(args.thread),'-n',args.norm,
                '-r',args.resolution,'--oe',args.oe,'--sparse',args.sparse,'--species',args.species]
     subprocess.run(cmd,check=True,env=CDesk_env)
@@ -447,7 +513,7 @@ def HiC_tad(args):
     python_script = os.path.join(root_dir,'5.HiC','4.TAD','TAD.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-    cmd = ["python3.7", python_script,'-i',args.input,'-o',args.output,
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output,
                "--insulation_window",str(args.insulation_window),"--directionality_window",str(args.directionality_window),"--expand",str(args.expand)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
@@ -456,7 +522,7 @@ def HiC_compartment(args):
     python_script = os.path.join(root_dir,'5.HiC','5.Compartment','Compartment.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.GC = args.GC.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.GC = os.path.abspath(args.GC) if args.GC !='no' else 'no'
-    cmd = ["python3.7", python_script,'-i',args.input,'-r',str(args.resolution),'-o',args.output,
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-r',str(args.resolution),'-o',args.output,
                '-t',str(args.thread),'--GC',args.GC,'--species',args.species,
                '--width',str(args.width),'--height',str(args.height)]
     subprocess.run(cmd,check=True,env=CDesk_env)
@@ -466,7 +532,7 @@ def HiC_loop(args):
     python_script = os.path.join(root_dir,'5.HiC','6.Loop','loop.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-    cmd = ['python3.7',python_script,'-i',args.input,'-o',args.output,'-t',str(args.thread)]
+    cmd = [CDesk_env['python3_7'],python_script,'-i',args.input,'-o',args.output,'-t',str(args.thread)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 # HiC: 7. Reconstruct
@@ -475,7 +541,7 @@ def HiC_reconstruct(args):
         R_script = os.path.join(root_dir,'5.HiC','7.Reconstruction','FLAMINGO.R')
         args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
         args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-        cmd = ['Rscript', R_script,args.input,args.chr,args.domain_res,args.frag_res,args.normalization,str(args.thread),args.output]
+        cmd = ['Rscript', R_script,args.input,args.chr,args.domain_res,args.frag_res,args.norm,str(args.thread),args.output]
         subprocess.run(cmd,check=True,env=CDesk_env)
     elif args.reconstruct_mode == 'hickit':
         CDesk_env["DipC"] = config['software']['dipc']
@@ -491,7 +557,7 @@ def HiC_pss(args):
     python_script = os.path.join(root_dir,'5.HiC','8.PSS','pss.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
-    cmd = ['python3.7',python_script,'-i',args.input,'-o',args.output,
+    cmd = [CDesk_env['python3_7'],python_script,'-i',args.input,'-o',args.output,
             '--bin',args.bin,'--curve_mean_min',args.curve_mean_min,'--curve_bin_min',args.curve_bin_min,'--curve_x_min',args.curve_x_min,'--curve_x_max',args.curve_x_max,
             '--expcurve_y_bias',args.expcurve_y_bias,'--expcurve_x_min',args.expcurve_x_min,'--expcurve_x_max',args.expcurve_x_max,'--heatmap_x_min',args.heatmap_x_min,
             '--heatmap_x_max',args.heatmap_x_max,'--width',args.width,'--height',args.height]
@@ -502,121 +568,104 @@ def HiC_compare(args):
     args.hic1 = args.hic1.rstrip('/');args.hic2 = args.hic2.rstrip('/');args.output = args.output.rstrip('/')
     args.hic1 = os.path.abspath(args.hic1);args.hic2 = os.path.abspath(args.hic2);args.output = os.path.abspath(args.output)
     python_script = os.path.join(root_dir,'5.HiC','9.Contact_compare','compare.py')
-    cmd = ['python3.7',python_script,'--hic1',args.hic1,'--hic2',args.hic2,'-o',args.output,'--chr',args.chr]
+    cmd = [CDesk_env['python3_7'],python_script,'--hic1',args.hic1,'--hic2',args.hic2,'-o',args.output,'--chr',args.chr,'--A_min',str(args.A_min)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 def parse_arguments():
-    global config
     # CDesk ArgumentParser Object
     parser = argparse.ArgumentParser(prog='CDesk', description="CDesk multiomics pipeline")
-    # 创建二级子命令
     subparsers = parser.add_subparsers(dest='omics', required=True, help="Choose an omic to run the script")
 
     # bulkRNA
-    # 创建 bulkRNA 子命令的子解析器
     bulkRNA_parser = subparsers.add_parser('bulkRNA', help='bulkRNA-seq pipeline')
     bulkRNA_subparsers = bulkRNA_parser.add_subparsers(help='bulkRNA-seq pipeline', title='bulkRNA-seq pipeline', dest='bulkRNA_command')
 
     # bulkRNA: 1. preprocess
-    # 添加 bulkRNA preprocessing 子命令
     bulkPreprocessing_parser = bulkRNA_subparsers.add_parser('preprocess', help='bulkRNA-seq preprocessing')
     # Required parameters
-    bulkPreprocessing_parser.add_argument('-i', required=True, help='Specify the input directory of input file (fq/bam files)')
-    bulkPreprocessing_parser.add_argument('-o', required=True, help='Specify the output directory')
+    bulkPreprocessing_parser.add_argument('--input','-i', required=True, help='The input sequencing data information file')
+    bulkPreprocessing_parser.add_argument('--output','-o', required=True, help='Specify the output directory')
     bulkPreprocessing_parser.add_argument('--species','-s', required=True, help='Specify the species',
                                       choices=list(config['data'].keys()))
     # Optional parameters
     bulkPreprocessing_parser.add_argument('-bw', action='store_true', help='If specified, perform a bam -> bigwig file transfer (optional)')
     bulkPreprocessing_parser.add_argument('-te', action='store_true', help='If specified, perform a TE expression analysis (optional)')
     bulkPreprocessing_parser.add_argument('--thread','-t', help='Specify number of threads (default is 8)',default=8,type=int)
-    bulkPreprocessing_parser.add_argument('-l', help='Single sequencing, 2:Pair sequencing (default is 2)',default=2,type=int)
-    bulkPreprocessing_parser.add_argument('--te_gene', help='Specify the TE gene txt file (optional)',default='')
 
     # bulkRNA: 2. QC
-    # 添加 bulkRNA QC 子命令
-    bulkQC_parser = bulkRNA_subparsers.add_parser('QC', help='bulkRNA-seq QC')
+    bulkQC_parser = bulkRNA_subparsers.add_parser('correlation', help='bulkRNA-seq sample correlation')
     # Required parameters
-    bulkQC_parser.add_argument('-i', required=True, help='Specify the input gene expression file (.csv), column name as sample, row name as gene')
-    bulkQC_parser.add_argument('-o', required=True, help='Specify the output directory')
+    bulkQC_parser.add_argument('--input','-i', required=True, help='Specify the input gene expression file (.csv), column name as sample, row name as gene')
+    bulkQC_parser.add_argument('--output','-o', required=True, help='Specify the output directory')
     bulkQC_parser.add_argument('--group',required=True ,help='The grouping file(csv,txt,tsv)')
-    bulkQC_parser.add_argument('--batch', default='no', help='Specify the batch effect removing method',choices=['no','removeBatchEffect','combat'])
-    bulkQC_parser.add_argument('--width',default=12,type=int, help='The plotting width, default: 12')
-    bulkQC_parser.add_argument('--height',default=8,type=int, help='If plotting height, default:8')
+    bulkQC_parser.add_argument('--batch', default='no', help='Specify the batch effect removing method, default: no',choices=['no','removeBatchEffect','combat'])
+    bulkQC_parser.add_argument('--width',default=8,type=int, help='The plotting width, default: 8')
+    bulkQC_parser.add_argument('--height',default=6,type=int, help='The plotting height, default: 6')
 
     # bulkRNA: 3. DEG
     bulkDEGD_parser = bulkRNA_subparsers.add_parser('DEG', help='bulkRNA-seq differential gene expression analysis')
     bulkDEGD_subparser = bulkDEGD_parser.add_subparsers(dest='DEG_mode', required=True, help="Choose a mode to run the script")
     # DEseq2
     bulkDEGD_deseq2 = bulkDEGD_subparser.add_parser('deseq2',help='Perform DEseq2 differential gene expression analysis')
-    bulkDEGD_deseq2.add_argument('-i',required=True,help='Input count matrix for DESeq2')
-    bulkDEGD_deseq2.add_argument('-o',required=True,help='Output directory')
-    bulkDEGD_deseq2.add_argument('-m',required=True,help='Group informations for analysis')
+    bulkDEGD_deseq2.add_argument('-i','--input',required=True,help='Input count matrix for DESeq2')
+    bulkDEGD_deseq2.add_argument('-o','--output',required=True,help='Output directory')
+    bulkDEGD_deseq2.add_argument('--group',required=True,help='Grouping file')
     bulkDEGD_deseq2.add_argument('-p',help='Whether to draw plot or not',action='store_true')
-    bulkDEGD_deseq2.add_argument('-gene',help='Interest genes file',default='NO')
-    bulkDEGD_deseq2.add_argument('-top_num',help='Number of top differential expression genes for heatmap, default: 500',default=500,type=int)
-    bulkDEGD_deseq2.add_argument('-fc',help='fc_threshold for vocano plot, default: 1',type=float,default=1)
-    bulkDEGD_deseq2.add_argument('-pval',help='pval_threshold for vocano plot, default: 0.05',type=float,default=0.05)
-    bulkDEGD_deseq2.add_argument('-width',help='Plot width, default: 5',type=float,default=5)
-    bulkDEGD_deseq2.add_argument('-height',help='Plot height, default: 5',type=float,default=5)
+    bulkDEGD_deseq2.add_argument('--gene',help='Interested genes file',default='NO')
+    bulkDEGD_deseq2.add_argument('--top_num',help='Number of top differential expression genes for heatmap if no gene file provided, default: 500',default=500,type=int)
+    bulkDEGD_deseq2.add_argument('--fc',help='fold change threshold of DEGs, default: 1',type=float,default=1)
+    bulkDEGD_deseq2.add_argument('--pval',help='p_adjusted threshold of DEGs, default: 0.05',type=float,default=0.05)
+    bulkDEGD_deseq2.add_argument('--width',help='Plot width, default: 5',type=float,default=5)
+    bulkDEGD_deseq2.add_argument('--height',help='Plot height, default: 5',type=float,default=5)
     # adjusted_t
     bulkDEGD_adjust_t = bulkDEGD_subparser.add_parser('adjusted_t',help='Perform adjusted_t differential gene expression analysis')
-    bulkDEGD_adjust_t.add_argument('-i',required=True,help='Input matrix for adjusted_t')
-    bulkDEGD_adjust_t.add_argument('-o',required=True,help='Output directory')
-    bulkDEGD_adjust_t.add_argument('-m',required=True,help='Group informations for analysis')
+    bulkDEGD_adjust_t.add_argument('-i','--input',required=True,help='Input matrix for adjusted_t')
+    bulkDEGD_adjust_t.add_argument('-o','--output',required=True,help='Output directory')
+    bulkDEGD_adjust_t.add_argument('--group',required=True,help='Grouping file')
     bulkDEGD_adjust_t.add_argument('-p',help='Whether to draw plot or not',action='store_true')
-    bulkDEGD_adjust_t.add_argument('-gene',help='Interest genes file',default='NO')
-    bulkDEGD_adjust_t.add_argument('-top_num',help='Number of top differential expression genes for heatmap, default: 500',default=500,type=int)
-    bulkDEGD_adjust_t.add_argument('-fc',help='fc_threshold of DEGs, defaullt: 1',type=float,default=1)
-    bulkDEGD_adjust_t.add_argument('-pval',help='pval_threshold of DEGs, default: 0.05',type=float,default=0.05)
-    bulkDEGD_adjust_t.add_argument('-width',help='Plot width, default: 5',type=float,default=5)
-    bulkDEGD_adjust_t.add_argument('-height',help='Plot height, default: 5',type=float,default=5)
+    bulkDEGD_adjust_t.add_argument('--gene',help='Interested genes file',default='NO')
+    bulkDEGD_adjust_t.add_argument('--top_num',help='Number of top differential expression genes for heatmap if no gene file provided, default: 500',default=500,type=int)
+    bulkDEGD_adjust_t.add_argument('--fc',help='fold change threshold of DEGs, defaullt: 1',type=float,default=1)
+    bulkDEGD_adjust_t.add_argument('--pval',help='p_adjusted threshold of DEGs, default: 0.05',type=float,default=0.05)
+    bulkDEGD_adjust_t.add_argument('--width',help='Plot width, default: 5',type=float,default=5)
+    bulkDEGD_adjust_t.add_argument('--height',help='Plot height, default: 5',type=float,default=5)
     # gfold
     bulkDEGD_gfold = bulkDEGD_subparser.add_parser('gfold',help='Perform adjusted_t differential gene expression analysis')
-    bulkDEGD_gfold.add_argument('-i',required=True,help='Input bam files directory for gfold')
-    bulkDEGD_gfold.add_argument('-o',required=True,help='Output directory')
-    bulkDEGD_gfold.add_argument('-m',required=True,help='Group informations for analysis')
-    bulkDEGD_gfold.add_argument('-s',required=True,help='Specify the species',choices=list(config['data'].keys()))
+    bulkDEGD_gfold.add_argument('-i','--input',required=True,help='Input bam grouping file')
+    bulkDEGD_gfold.add_argument('-o','--output',required=True,help='Output directory')
+    bulkDEGD_gfold.add_argument('-s','--species',required=True,help='Specify the species',choices=list(config['data'].keys()))
     bulkDEGD_gfold.add_argument('-p',help='Whether to draw plot or not',action='store_true')
-    bulkDEGD_gfold.add_argument('-t',help='Number of threads',type=int,default=20)
-    bulkDEGD_gfold.add_argument('-gene',help='Interest gene file',default='NO')
-    bulkDEGD_gfold.add_argument('-top_num',help='Number of top differential expression genes for heatmap, default: 500',default=500,type=int)
-    bulkDEGD_gfold.add_argument('-gfold',help='GFold threshold of DEGs, default: 1',type=float,default=1)
-    bulkDEGD_gfold.add_argument('-readcnt',type=str,default='',help='Provide the readcnt file directory (optional)')
-    bulkDEGD_gfold.add_argument('-width',help='Plot width, default: 5',type=float,default=5)
-    bulkDEGD_gfold.add_argument('-height',help='Plot height, default: 5',type=float,default=5)
+    bulkDEGD_gfold.add_argument('-t','--thread',help='Number of threads, default: 20',type=int,default=20)
+    bulkDEGD_gfold.add_argument('--gene',help='Interested gene file',default='NO')
+    bulkDEGD_gfold.add_argument('--top_num',help='Number of top differential expression genes for heatmap if no gene file provided, default: 500',default=500,type=int)
+    bulkDEGD_gfold.add_argument('--gfold',help='GFold threshold of DEGs, default: 1',type=float,default=1)
+    bulkDEGD_gfold.add_argument('--width',help='Plot width, default: 5',type=float,default=5)
+    bulkDEGD_gfold.add_argument('--height',help='Plot height, default: 5',type=float,default=5)
 
     # bulkRNA: 4. enrich
-    # 添加 bulkRNA GO 子命令
-    bulkEnrich_parser = bulkRNA_subparsers.add_parser('enrich', help='bulkRNA-seq gene ontology analysis')
+    bulkEnrich_parser = bulkRNA_subparsers.add_parser('enrich', help='bulkRNA-seq gene functional enrichment analysis')
     bulkEnrich_subparser = bulkEnrich_parser.add_subparsers(dest='enrich_mode', required=True, help="Choose a mode to run the script")
-    # enrichment_analysis_customer
-    bulk_custom = bulkEnrich_subparser.add_parser('custom', help='Perform the enrichment analysis based on the customization gene sets')
-    bulk_custom.add_argument('-i', required=True, help='path of a single column file containing genes of interests(SYMBOL)')
-    bulk_custom.add_argument('--custom','-c', required=True, help='A customer file containing two columns, every row is consisted of two factors: the customer term name and gene of interests separated by tab')
-    bulk_custom.add_argument('-o', required=True, help='Output directory')
-    bulk_custom.add_argument('--width', default='20',type=int, help='Plot width, default: 20')
-    bulk_custom.add_argument('--height', default='10', type=int,help='Plot height, default: 10')
-    # GO enrichment_analysis
-    bulkGO = bulkEnrich_subparser.add_parser('GO', help='Perform the GO enrichment analysis based on the pubsihed GO/KEGG gene sets')
-    bulkGO.add_argument('-i', required=True, help='path of a single column file containing genes of interests(SYMBOL)')
-    bulkGO.add_argument('--species','-s', required=True, help='Choose the functional annotation database of specific species: human, rat, mouse, chicken, or pig',choices=["human", "rat","mouse","chicken","pig"])
-    bulkGO.add_argument('-t', required=True,default=0.5, help='Define a threshold between 0~1, the GO terms will be merged into one once the gene sets matched to them exceed the threshold, default： 0.5')
-    bulkGO.add_argument('-o', required=True, help='Output directory')
-    bulkGO.add_argument('--width', default='20',type=int, help='Plot width, default: 20')
-    bulkGO.add_argument('--height', default='10', type=int,help='Plot height, default: 10')
-    # KEGG enrichment_analysis
-    bulkKEGG = bulkEnrich_subparser.add_parser('KEGG', help='Perform the KEGG enrichment analysis based on the pubsihed GO/KEGG gene sets')
-    bulkKEGG.add_argument('-i', required=True, help='Path of a single column file containing genes of interests(SYMBOL)')
-    bulkKEGG.add_argument('--species','-s', required=True, help='Choose the functional annotation database of specific species: human, rat, mouse, chicken, or pig',
-                        choices=["human", "rat","mouse","chicken","pig"])
-    bulkKEGG.add_argument('-o', required=True, help='Output directory')
-    bulkKEGG.add_argument('--width', default='20',type=float, help='Plot width, default: 20')
-    bulkKEGG.add_argument('--height', default='10', type=float,help='Plot height, default: 10')
+    # enrich
+    bulk_enrich = bulkEnrich_subparser.add_parser('analyze', help='Perform the functional enrichment analysis')
+    bulk_enrich.add_argument('-i', '--input',required=True, help='The single column file of interested genes (SYMBOL)')
+    bulk_enrich.add_argument('--type',help='Specify the analysis type, single/multiple samples',required=True,choices=["single","multi"])
+    bulk_enrich.add_argument('-s','--species',help='Species',default='no',choices=["human", "rat","mouse","chicken","pig","no"])
+    bulk_enrich.add_argument('-o','--output', required=True, help='Output directory')
+    bulk_enrich.add_argument('--custom',default='no', help='The reference customer file containing two columns for custom analysis (every row is consisted of two factors: the customer term name and gene of interests separated by tab)')
+    bulk_enrich.add_argument('--width', default='10',type=int, help='Plot width, default: 10')
+    bulk_enrich.add_argument('--height', default='6', type=int,help='Plot height, default: 6')
+    # plot
+    bulk_plot = bulkEnrich_subparser.add_parser('plot', help='Plot the functional enrichment result')
+    bulk_plot.add_argument('-i','--input', required=True, help='The enrichment result file')
+    bulk_plot.add_argument('-o','--output',required=True, help='Output directory')
+    bulk_plot.add_argument('--type',help='Specify the analysis type, single/multiple samples',required=True,choices=["single","multi"])
+    bulk_plot.add_argument('--width', default='10',type=int, help='Plot width, default: 10')
+    bulk_plot.add_argument('--height', default='6', type=int,help='Plot height, default: 6')
     # GSEA
     bulkGSEA = bulkEnrich_subparser.add_parser('GSEA', help='bulkRNA-seq GSEA analysis')
-    bulkGSEA.add_argument("-i",required=True,type=str, help="The ranked gene list file (e.g., DEG result file)")
-    bulkGSEA.add_argument("-o",required=True,  type=str, help="Output directory")
-    bulkGSEA.add_argument("-s",required=True,type=str, help="Specify the species",choices=['human','mouse','pig','chicken','rat'])
+    bulkGSEA.add_argument("-i","--input",required=True,type=str, help="The ranked gene list file (e.g., DEG result file)")
+    bulkGSEA.add_argument("-o","--output",required=True,  type=str, help="Output directory")
+    bulkGSEA.add_argument("-s","--species",required=True,type=str, help="Specify the species",choices=['human','mouse','pig','chicken','rat'])
     bulkGSEA.add_argument("--path",type=str,default='NO', help="Specify the paths to plot")   
     bulkGSEA.add_argument("--cols",default='gene_name,log2FoldChange',type=str, help="Columns used, default:gene_name,log2FoldChange")
     bulkGSEA.add_argument('--width', default=7,type=float, help='Plot width, default: 7')
@@ -625,31 +674,30 @@ def parse_arguments():
     # bulkRNA: 5. Similarity Analysis
     bulkSimilarity_parser = bulkRNA_subparsers.add_parser('similarity', help='bulkRNA-seq similarity analysis')
     # Required parameters
-    bulkSimilarity_parser.add_argument('--sample1', required=True, help='Secify the first gene expression csv file')
-    bulkSimilarity_parser.add_argument('--sample2', required=True, help='Specify the second gene expression csv file')
-    bulkSimilarity_parser.add_argument('-o', required=True, help='Output directory')
-    # Optional parameters
+    bulkSimilarity_parser.add_argument('-i','--input', required=True, help='The gene expression list file')
+    bulkSimilarity_parser.add_argument('-o','--output', required=True, help='Output directory')
     bulkSimilarity_parser.add_argument('--group',required=True,help='The grouping file')
+    # Optional parameters
     bulkSimilarity_parser.add_argument('--gene',default='All',help='Specify the gene list, default: ALL')
     bulkSimilarity_parser.add_argument('--batch', default='no', help='Specify the batch effect removing method',choices=['no','removeBatchEffect','combat'])
-    bulkSimilarity_parser.add_argument('--plot_width',default=10,type=int, help='The plotting width, default: 10')
-    bulkSimilarity_parser.add_argument('--plot_height',default=8,type=int, help='If plotting height, default:8')
+    bulkSimilarity_parser.add_argument('--width',default=10,type=int, help='The plotting width, default: 10')
+    bulkSimilarity_parser.add_argument('--height',default=8,type=int, help='If plotting height, default:8')
 
     # bulkRNA: 6. Clustering
     bulkClustering_parser = bulkRNA_subparsers.add_parser('cluster', help='bulkRNA-seq gene clustering analysis')
     bulkClustering_subparser = bulkClustering_parser.add_subparsers(dest='cluster_mode', required=True, help="Choose to use Kmean or WGCNA")
     # WGCNA
     bulkWGCNA_parser = bulkClustering_subparser.add_parser('WGCNA', help='bulkRNA-seq WGCNA analysis')
-    bulkWGCNA_parser.add_argument('--count_file', required=True, help='The path to the file containing the gene expression count data.')
-    bulkWGCNA_parser.add_argument('--pheno_file', required=True, help='A file path containing phenotypic information that describes the characteristics or experimental conditions of each sample')
-    bulkWGCNA_parser.add_argument('--trait',required=True, help='Phenotypic information, calculating the correlation between gene modules and phenotypes')
-    bulkWGCNA_parser.add_argument('-o',required=True,help='Output directory')
+    bulkWGCNA_parser.add_argument('-i','--input', required=True, help='The input gene expression matrix file.')
+    bulkWGCNA_parser.add_argument('--pheno', required=True, help='The sample trait information file.')
+    bulkWGCNA_parser.add_argument('--trait',required=True, help='The phenotypes specified to calculate correlations with gene modules.')
+    bulkWGCNA_parser.add_argument('-o','--output',required=True,help='Output directory')
     # Kmean
     bulkKmean_parser = bulkClustering_subparser.add_parser('kmean', help='bulkRNA-seq Knmean gene clustering')
-    bulkKmean_parser.add_argument('-i', required=True, help='The path to the gene expression count/fpkm csv file.')
+    bulkKmean_parser.add_argument('-i','--input', required=True, help='The input gene expression matrix file.')
     bulkKmean_parser.add_argument('--group', required=True, help='The grouping csv file')
     bulkKmean_parser.add_argument('--cluster',type=int,default=6,help='Number of clusters for K-means clustering, default: 6')
-    bulkKmean_parser.add_argument('-o',required=True,help='Output directory')
+    bulkKmean_parser.add_argument('-o','--output',required=True,help='Output directory')
     bulkKmean_parser.add_argument('--method',default='correlation',help='Distance measure to be used for clustering, default: correlation',
                                   choices=["euclidean", "maximum", "manhattan", "canberra", "binary", "pearson", "abspearson", "abscorrelation", "correlation","spearman", "kendall"])
     bulkKmean_parser.add_argument('--height',default=10,help='Output image height, default: 10',type=float)
@@ -666,9 +714,9 @@ def parse_arguments():
     bulkSplice_detect.add_argument('-s','--species',type=str,required=True,choices=list(config['data'].keys()),help="Specify the species")
     bulkSplice_detect.add_argument('-o','--output',type=str,required=True,help="The output directory")
     # Optional
-    bulkSplice_detect.add_argument('--type',choices=['paired','single'],default='paired',required=True,help="Type of read: paired/single, default:paired")
+    bulkSplice_detect.add_argument('--type',choices=['paired','single'],default='paired',help="Type of read: paired/single, default:paired")
     bulkSplice_detect.add_argument('-t','--thread', type=int, default=10, help="Number of threads, default: 10")
-    bulkSplice_detect.add_argument('--length',required=int,default=150,help="The length of each read, default: 150")
+    bulkSplice_detect.add_argument('--length',type=int,default=150,help="The length of each read, default: 150")
     bulkSplice_detect.add_argument('--variable_read_length',action='store_true',help="Allow reads with lengths that differ from read Length")
     bulkSplice_detect.add_argument('--allow_clipping',action='store_true',help="Allow alignments with soft or hard clipping to be used")
     # Splice draw
@@ -680,11 +728,10 @@ def parse_arguments():
     bulkSplice_draw.add_argument('--region',type=str,required=True,help="The genome region coordinates: format:{chromosome}:{strand}:{start}:{end}")
     bulkSplice_draw.add_argument('--group',type=str,required=True,help="The path to a .gf file which groups the replicates")
     # Optional
-    bulkSplice_draw.add_argument('--exon_s',type=int, default=1, required=True,help="How much to scale down exon, default: 1")
-    bulkSplice_draw.add_argument('--intron_s',type=int, default=1, required=True,help="How much to scale down introns, default: 1")
+    bulkSplice_draw.add_argument('--exon_s',type=int, default=1,help="How much to scale down exon, default: 1")
+    bulkSplice_draw.add_argument('--intron_s',type=int, default=1,help="How much to scale down introns, default: 1")
  
     # scRNA
-    # 创建 scRNA 子命令的子解析器
     scRNA_parser = subparsers.add_parser('scRNA', help='scRNA pipeline')
     scRNA_subparser = scRNA_parser.add_subparsers(help='scRNA pipeline', title='scRNA pipeline', dest='scRNA_command')
    
@@ -693,44 +740,42 @@ def parse_arguments():
     scRNApreprocess_subparser = scRNApreprocess_parser.add_subparsers(dest='scRNA_preprocess_mode',required=True,help='Choose a mode')
     # cellranger
     scRNApreprocess_cellranger = scRNApreprocess_subparser.add_parser('cellranger',help='Perform cellranger preprocess')
-    scRNApreprocess_cellranger.add_argument('-i', required=True, help='Input folder of fastq.gz files: X_1.fastq(fq).gz,X_2.fastq(fq).gz')
-    scRNApreprocess_cellranger.add_argument('-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
-    scRNApreprocess_cellranger.add_argument('-o', required=True, help='Output directory')
-    scRNApreprocess_cellranger.add_argument('-t',help='Specify number of threads (default is 8)',default=8,type=int)
+    scRNApreprocess_cellranger.add_argument('--input','-i', required=True, help='Input fq information file')
+    scRNApreprocess_cellranger.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
+    scRNApreprocess_cellranger.add_argument('--output','-o', required=True, help='Output directory')
+    scRNApreprocess_cellranger.add_argument('--thread','-t',help='Specify number of threads (default is 8)',default=8,type=int)
     # DrSeq
     scRNApreprocess_drseq = scRNApreprocess_subparser.add_parser('drseq',help='Perform DrSeq preprocess')
-    scRNApreprocess_drseq.add_argument('-i', required=True, help='Input folder of fastq files: X_1.fastq,X_2.fastq')
-    scRNApreprocess_drseq.add_argument('-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
-    scRNApreprocess_drseq.add_argument('-o', required=True, help='Output directory')
-    scRNApreprocess_drseq.add_argument('-t',help='Specify number of threads (default is 8)',default=8,type=int)
+    scRNApreprocess_drseq.add_argument('--input','-i', required=True, help='Input fq information file')
+    scRNApreprocess_drseq.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
+    scRNApreprocess_drseq.add_argument('--output','-o', required=True, help='Output directory')
+    scRNApreprocess_drseq.add_argument('--thread','-t',help='Specify number of threads (default is 8)',default=8,type=int)
     # smartseq
     scRNApreprocess_smartseq = scRNApreprocess_subparser.add_parser('smartseq',help='Perform smartseq preprocess')
-    scRNApreprocess_smartseq.add_argument('-i', required=True, help='Specify the input directory of input file (fq/bam files)')
-    scRNApreprocess_smartseq.add_argument('-o', required=True, help='Specify the output directory')
-    scRNApreprocess_smartseq.add_argument('-s', required=True, help='Specify the species')
+    scRNApreprocess_smartseq.add_argument('--input','-i', required=True, help='Input fq information file')
+    scRNApreprocess_smartseq.add_argument('--output','-o', required=True, help='Specify the output directory')
+    scRNApreprocess_smartseq.add_argument('--species','-s', required=True, help='Specify the species')
     scRNApreprocess_smartseq.add_argument('-bw', action='store_true', help='If specified, perform a bam -> bigwig file transfer (optional)')
     scRNApreprocess_smartseq.add_argument('-te', action='store_true', help='If specified, perform a TE expression analysis (optional)')
-    scRNApreprocess_smartseq.add_argument('-t', help='Specify number of threads (default is 8)',default=8,type=int)
-    scRNApreprocess_smartseq.add_argument('-l', help='Single sequencing, 2:Pair sequencing (default is 2)',default=2,type=int)
-    scRNApreprocess_smartseq.add_argument('--te_gene', help='Specify the TE gene txt file (optional)',default='')
+    scRNApreprocess_smartseq.add_argument('--thread','-t', help='Specify number of threads (default is 8)',default=8,type=int)
     # singleron
     scRNApreprocess_singleron = scRNApreprocess_subparser.add_parser('singleron',help='Perform singleron preprocess')
-    scRNApreprocess_singleron.add_argument('-i', required=True, help='Specify the input fastq file directory, fastqs file format: X_1.fastq.gz, X_2.fastq.gz')
-    scRNApreprocess_singleron.add_argument('-o', required=True, help='Output directory')
-    scRNApreprocess_singleron.add_argument('-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
-    scRNApreprocess_singleron.add_argument('-t', help='Specify number of threads (default is 8)',default=8,type=int)
+    scRNApreprocess_singleron.add_argument('--input','-i', required=True, help='Input fq information file')
+    scRNApreprocess_singleron.add_argument('--output','-o', required=True, help='Output directory')
+    scRNApreprocess_singleron.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
+    scRNApreprocess_singleron.add_argument('--thread','-t', help='Specify number of threads (default is 8)',default=8,type=int)
     # dnbc
     scRNAdnbc_parser = scRNApreprocess_subparser.add_parser('dnbc',help='Perform dnbc pipeline')
-    scRNAdnbc_parser.add_argument('-i', required=True, help='Specify the input tsv file')
-    scRNAdnbc_parser.add_argument('-o', required=True, help='Output directory')
-    scRNAdnbc_parser.add_argument('-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
-    scRNAdnbc_parser.add_argument('-t', help='Specify number of threads (default is 10)',default=10,type=int)
+    scRNAdnbc_parser.add_argument('--input','-i', required=True, help='Input fq information file')
+    scRNAdnbc_parser.add_argument('--output','-o', required=True, help='Output directory')
+    scRNAdnbc_parser.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
+    scRNAdnbc_parser.add_argument('--thread','-t', help='Specify number of threads (default is 10)',default=10,type=int)
 
     # scRNA: 2. Clustering
     scRNAclustering_parser = scRNA_subparser.add_parser('cluster', help='scRNA clustering command')
-    scRNAclustering_parser.add_argument('-i',required=True, help='Input files directory')
-    scRNAclustering_parser.add_argument('-o',required=True, help='Ouput directory')
-    scRNAclustering_parser.add_argument('-n',required=True, help='Output prefix name')
+    scRNAclustering_parser.add_argument('-i','--input',required=True, help='Input files directory')
+    scRNAclustering_parser.add_argument('-o','--output',required=True, help='Ouput directory')
+    scRNAclustering_parser.add_argument('-n','--name',required=True, help='Output prefix name')
     scRNAclustering_parser.add_argument('--mode',required=True, help='Seurat or Scanpy',choices=['seurat','scanpy'])
     scRNAclustering_parser.add_argument('--min_cells', type=int, default=3, help="minimum cells threshold for data filtration preprocess, default: 3")
     scRNAclustering_parser.add_argument('--min_features', type=int, default=200, help="minimum features threshold data filtration preprocess, default: 200")
@@ -740,53 +785,61 @@ def parse_arguments():
     scRNAclustering_parser.add_argument('--variable_features', type=int, default=2000, help="clustering variable features, default: 2000")
     scRNAclustering_parser.add_argument('--dim_prefer', type=int, default=30, help="clustering dimesions, default: 30")
     scRNAclustering_parser.add_argument('--res', type=float, default=1, help="clustering resolution, default: 1")
+    scRNAclustering_parser.add_argument('--width',default=10,type=int, help='The plotting width, default: 10')
+    scRNAclustering_parser.add_argument('--height',default=8,type=int, help='The plotting width, default: 8')
     
     # scRNA: 3. Annotation
     scRNAannotation_parser = scRNA_subparser.add_parser('annotation', help='scRNA clusters annotation')
     scRNAannotation_subparser = scRNAannotation_parser.add_subparsers(dest='scRNA_annotation_mode',required=True,help='Choose a mode')
     # Marker
     scRNAannotation_marker = scRNAannotation_subparser.add_parser('marker',help='scRNA annotation using markers')
-    scRNAannotation_marker.add_argument('-i', required=True, help='The input .rds data to annotate')
+    scRNAannotation_marker.add_argument('-i','--input', required=True, help='The input .rds data to annotate')
     scRNAannotation_marker.add_argument('--marker', required=True, help='The marker file with cell marker information')
     scRNAannotation_marker.add_argument('--meta', required=True, help='The meta colname of reference data used')
-    scRNAannotation_marker.add_argument('-o', required=True, help='Output directory')
+    scRNAannotation_marker.add_argument('-o','--output', required=True, help='Output directory')
     scRNAannotation_marker.add_argument('--cluster', default='umap', help='Plot type',choices=['umap','tsne'])
     scRNAannotation_marker.add_argument('--expression_thre', type=float,default=1.5, help='The average expression threshold')
     scRNAannotation_marker.add_argument('--percentage_thre', type=float,default=0.7, help='The express > 0 percentage threshold')
     scRNAannotation_marker.add_argument('--marker_thre', type=float,default=0.7, help='The proportion threshold for passing the screening')
+    scRNAannotation_marker.add_argument('--width',default=10,type=int, help='The plotting width, default: 10')
+    scRNAannotation_marker.add_argument('--height',default=8,type=int, help='The plotting width, default: 8')
     # TransferLabel
     scRNAannotation_transfer = scRNAannotation_subparser.add_parser('transfer',help='scRNA annotation using TransferLabel')
     scRNAannotation_transfer.add_argument('--query', required=True, help='The query .rds data to annotate')
     scRNAannotation_transfer.add_argument('--ref', required=True, help='The reference .rds data')
     scRNAannotation_transfer.add_argument('--meta', required=True, help='The meta colname of reference data used')
-    scRNAannotation_transfer.add_argument('-o', required=True, help='Output directory')
+    scRNAannotation_transfer.add_argument('-o','--output', required=True, help='Output directory')
     scRNAannotation_transfer.add_argument('--cluster', default='umap', help='Plot type',choices=['umap','tsne'])
     scRNAannotation_transfer.add_argument('--nfeatures', default=5000,type=int,help='The number of variable features')
     scRNAannotation_transfer.add_argument('--dims', default=30,type=int,help='The number of PC dimensions used')
+    scRNAannotation_transfer.add_argument('--width',default=10,type=int, help='The plotting width, default: 10')
+    scRNAannotation_transfer.add_argument('--height',default=8,type=int, help='The plotting width, default: 8')
 
     # scRNA: 4. marker
     scRNAmarker_parser = scRNA_subparser.add_parser('marker', help='scRNA marker gene detection command')
     scRNAmarker_subparser = scRNAmarker_parser.add_subparsers(dest='scRNA_marker_mode',required=True,help='Choose a mode')
     # all
     scRNAmarker_all = scRNAmarker_subparser.add_parser('all',help='Perform FindAllMarkers')
-    scRNAmarker_all.add_argument('-i', required=True, help='Input Seurat object rds file')
+    scRNAmarker_all.add_argument('-i','--input', required=True, help='Input Seurat object rds file')
     scRNAmarker_all.add_argument('--meta', required=True, help='Specify the meta data column')
-    scRNAmarker_all.add_argument('-f', default=0.5,type=float,help='Log Fold Change threshold is used to screen for differentially expressed genes (default:0.5)')
+    scRNAmarker_all.add_argument('-fc', default=0.5,type=float,help='Log Fold Change threshold is used to screen for differentially expressed genes (default:0.5)')
     scRNAmarker_all.add_argument('-p', default=0.05,type=float,help='Specific Adjusted p-value threshold, used to determine the statistical significance of gene expression differences (default:0.05)')
     scRNAmarker_all.add_argument('-m',default=0.25,type=float,help='Minimum percentage of expressed cells, indicating at least what percentage of cells a gene must be expressed in to participate in the analysis (default:0.25)')
-    scRNAmarker_all.add_argument('-o', required=True,help='Output directory')
+    scRNAmarker_all.add_argument('-o','--output', required=True,help='Output directory')
     scRNAmarker_all.add_argument('--width', default=16,type=int,help='The plot width, default: 16')
     scRNAmarker_all.add_argument('--height', default=14,type=int,help='The plot height, default: 14')
     # 2
     scRNAmarker_2 = scRNAmarker_subparser.add_parser('2group',help='Perform marker gene detection in 2 specified groups')
-    scRNAmarker_2.add_argument('-i', required=True, help='Input Seurat object rds file')
-    scRNAmarker_2.add_argument('-f', default=0.5,type=float,help='Log Fold Change threshold is used to screen for differentially expressed genes (default:0.5)')
+    scRNAmarker_2.add_argument('-i','--input', required=True, help='Input Seurat object rds file')
+    scRNAmarker_2.add_argument('-fc', default=0.5,type=float,help='Log Fold Change threshold is used to screen for differentially expressed genes (default:0.5)')
     scRNAmarker_2.add_argument('-p', default=0.05,type=float,help='Specific Adjusted p-value threshold, used to determine the statistical significance of gene expression differences (default:0.05)')
     scRNAmarker_2.add_argument('-m',default=0.25,type=float,help='Minimum percentage of expressed cells, indicating at least what percentage of cells a gene must be expressed in to participate in the analysis (default:0.25)')
-    scRNAmarker_2.add_argument('-o',required=True,help='Output directory')
+    scRNAmarker_2.add_argument('-o','--output',required=True,help='Output directory')
     scRNAmarker_2.add_argument('--type1',type=str,required=True,help='Specify the first type')
     scRNAmarker_2.add_argument('--type2',type=str,required=True,help='Specify the second type')
     scRNAmarker_2.add_argument('--meta', required=True,help='Specify the meta data column')
+    scRNAmarker_2.add_argument('--width', default=10,type=int,help='The plot width, default: 16')
+    scRNAmarker_2.add_argument('--height', default=8,type=int,help='The plot height, default: 14')
     
     # scRNA: 5. trajectory
     scRNAtrajectory_parser = scRNA_subparser.add_parser('trajectory', help='scRNA trajectory command')
@@ -885,6 +938,7 @@ def parse_arguments():
     scRNAintegrate_seurat.add_argument('--max_iter_harmony', default=20,type=int, help='Harmony maximal iteration, default: 20')
     scRNAintegrate_seurat.add_argument('--width', default=10,type=int, help='Plot width, default: 10')
     scRNAintegrate_seurat.add_argument('--height', default=10,type=int, help='Plot height, default: 10')
+    scRNAintegrate_seurat.add_argument('--k_anchor', default=20,type=int, help='k.anchor for CCA integrate, default: 20')
     # bulk+scRNA
     scRNAintegrate_bulk = scRNAintegrate_subparser.add_parser('bulk',help='Integrate seurate scRNA data and bulk data')
     scRNAintegrate_bulk.add_argument('--bulk', required=True, help='bulkRNA data list file')
@@ -899,95 +953,85 @@ def parse_arguments():
     scRNAintegrate_bulk.add_argument('--height', default=10,type=int, help='Plot height, default: 10')
 
     # ATAC
-    # 创建 ATAC 子命令的子解析器
     ATAC_parser = subparsers.add_parser('ATAC', help='ATAC pipeline')
     ATAC_subparsers = ATAC_parser.add_subparsers(help='ATAC pipeline', title='ATAC pipeline', dest='ATAC_command')
 
     # ATAC: 1. preprocess
     ATACpreprocess_parser = ATAC_subparsers.add_parser('preprocess', help='ATAC preprocess command')
-    ATACpreprocess_parser.add_argument('-i',required=True, help='Input files directory')
-    ATACpreprocess_parser.add_argument('-o',required=True, help='Output directory')
-    ATACpreprocess_parser.add_argument('-s',required=True, help='Specify species',choices=list(config['data'].keys()))
-    ATACpreprocess_parser.add_argument('-t',type=int,default=8, help='Number of threads, default: 8')
-    ATACpreprocess_parser.add_argument('-l',type=int,help='1:Single sequencing, 2:Pair sequencing (default is 2)',choices=[1,2],default=2)
-    ATACpreprocess_parser.add_argument('--fastqc',action='store_true', help='If specified, do fastqc')
-    ATACpreprocess_parser.add_argument('--group',default='',help='The grouping file if you need to merge the replicates or rename files')
+    ATACpreprocess_parser.add_argument('-i','--input',required=True, help='Input fq information file')
+    ATACpreprocess_parser.add_argument('-o','--output',required=True, help='Output directory')
+    ATACpreprocess_parser.add_argument('-s','--species',required=True, help='Specify species',choices=list(config['data'].keys()))
+    ATACpreprocess_parser.add_argument('-t','--thread',type=int,default=8, help='Number of threads, default: 8')
 
     # ATAC: 2. QC
     ATAC_QC_parser = ATAC_subparsers.add_parser('QC', help='ATAC replicate QC')
-    ATAC_QC_parser.add_argument("--bw",required=True, type=str, help="Input bw file directory")
-    ATAC_QC_parser.add_argument("--species", required=True,type=str, help="Species",choices=list(config['data'].keys()))
-    ATAC_QC_parser.add_argument("--bin", type=int,default=500, help="Bin for sample correlation")
-    ATAC_QC_parser.add_argument("--group",required=True, type=str, help="Grouping file")
-    ATAC_QC_parser.add_argument("--peak",type=str,default='', help="Input peak file directory")
-    ATAC_QC_parser.add_argument("--suffix",required=True,default="_peaks.bed", help="Peak file suffix (e.g., _peaks.bed)")
-    ATAC_QC_parser.add_argument("--step", type=int,default=1, help="BW file partition step")
-    ATAC_QC_parser.add_argument("-o", required=True,type=str, help="Output directory")
-    ATAC_QC_parser.add_argument("-t", type=int,default=30, help="Threads to run")
+    ATAC_QC_parser.add_argument("-i","--input",required=True, type=str, help="The input ATAC sample information file")
+    ATAC_QC_parser.add_argument("-s","--species", required=True,type=str, help="Species",choices=list(config['data'].keys()))
+    ATAC_QC_parser.add_argument("--bin", type=int,default=100000, help="Bin size for genomic binning, default: 100000")
+    ATAC_QC_parser.add_argument("--step", type=int,default=1, help="Peak file partition step, default: 1")
+    ATAC_QC_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
+    ATAC_QC_parser.add_argument("-t","--thread", type=int,default=30, help="Threads to run, default: 30")
     ATAC_QC_parser.add_argument('--width',default=12,type=int, help='The plot width, default: 12')
-    ATAC_QC_parser.add_argument('--height',default=8,type=int, help='If plotting height, default:8')
+    ATAC_QC_parser.add_argument('--height',default=8,type=int, help='If plot height, default:8')
 
     # ATAC: 3. Dynamic
     ATAC_dynamic_parser = ATAC_subparsers.add_parser('dynamic', help='ATAC dynamic pattern analysis')
-    ATAC_dynamic_parser.add_argument("--file_meta",required=True, type=str, help="The meta file")
-    ATAC_dynamic_parser.add_argument("--bed_dir", required=True,type=str, help="Specify the bed file directory")
-    ATAC_dynamic_parser.add_argument("--bed_summit",required=True, type=str, help="Specify the bed file summit (e.g., .bed)")
-    ATAC_dynamic_parser.add_argument("--bw_dir", required=True,type=str, help="Specify the bw file directory")
-    ATAC_dynamic_parser.add_argument("--remove_cluster",default='',type=str, help="Input peak file directory")
-    ATAC_dynamic_parser.add_argument("-o",required=True,type=str, help="The output directory")
+    ATAC_dynamic_parser.add_argument("-i","--input",required=True, type=str, help="The input sample information file")
+    ATAC_dynamic_parser.add_argument("--remove_cluster",default='',type=str, help="The cluster to remove, default: ''")
+    ATAC_dynamic_parser.add_argument("-o","--output",required=True,type=str, help="The output directory")
     ATAC_dynamic_parser.add_argument("--important_index",default=0,type=int, help="Specify the group to align, 1: the latter one in meta file, 0(default): the former one in meta file")
-    ATAC_dynamic_parser.add_argument("--species", required=True,type=str,choices=list(config['data'].keys()), help="Species")
+    ATAC_dynamic_parser.add_argument("-s","--species", required=True,type=str,choices=list(config['data'].keys()), help="Species")
 
     # ATAC: 4. motif
     ATAC_motif_parser = ATAC_subparsers.add_parser('motif', help='ATAC motif analysis')
     ATAC_motif_subparser = ATAC_motif_parser.add_subparsers(dest='motif_mode', required=True, help="Choose to analyze or plot")
     # homer find
-    ATAC_Find_homer_subparser = ATAC_motif_subparser.add_parser('homer_find', help='Perform homer motif finding analysis')
-    ATAC_Find_homer_subparser.add_argument("-i",required=True,type=str, help="The bed files directory")
-    ATAC_Find_homer_subparser.add_argument("-o",required=True,  type=str, help="Output directory")
-    ATAC_Find_homer_subparser.add_argument("--species",required=True, choices=['galGal6', 'chicken', 'hg38', 'human', 'mm10', 'mouse', 'susScr11', 'pig'], type=str, help="Species")
-    ATAC_Find_homer_subparser.add_argument("-t",default=20,  type=int, help="Number of threads, default: 20")
-    ATAC_Find_homer_subparser.add_argument("--summit",default='_peaks.bed', type=str, help="The summit of bed files, default: _peaks.bed")
+    ATAC_Find_homer_subparser = ATAC_motif_subparser.add_parser('homer', help='Perform homer motif finding analysis')
+    ATAC_Find_homer_subparser.add_argument("-i","--input",required=True,type=str, help="The input gene/peak information file")
+    ATAC_Find_homer_subparser.add_argument("-o","--output",required=True,  type=str, help="Output directory")
+    ATAC_Find_homer_subparser.add_argument("-s","--species",required=True, help='Available gene in HOMER or provide the path to genome FASTA files for peak mode', type=str)
+    ATAC_Find_homer_subparser.add_argument("--mode",required=True,type=str, help="Analysis mode: peak/gene",choices=['gene','peak'])
+    ATAC_Find_homer_subparser.add_argument("-t","--thread",default=20,  type=int, help="Number of threads, default: 20")
+    ATAC_Find_homer_subparser.add_argument("--start",default=-300,type=int, help="offset from TSS, default=-300")
+    ATAC_Find_homer_subparser.add_argument("--end",default=50,type=int, help="offset from TSS, default=50")
     # meme find
-    ATAC_Find_meme_subparser = ATAC_motif_subparser.add_parser('meme_find', help='Perform meme motif finding analysis')
-    ATAC_Find_meme_subparser.add_argument("-i",required=True,help="The fasta files input directory")
-    ATAC_Find_meme_subparser.add_argument("-o",required=True,  type=str, help="Output directory")
-    ATAC_Find_meme_subparser.add_argument("--species",required=True, choices=['human','mouse'],type=str, help="Species")
-    ATAC_Find_meme_subparser.add_argument("-t",default=10,  type=int, help="Number of threads, default: 10")
+    ATAC_Find_meme_subparser = ATAC_motif_subparser.add_parser('meme', help='Perform meme motif finding analysis')
+    ATAC_Find_meme_subparser.add_argument("-i","--input",required=True,help="The fasta input information file")
+    ATAC_Find_meme_subparser.add_argument("-o","--output",required=True,  type=str, help="Output directory")
+    ATAC_Find_meme_subparser.add_argument("-t","--thread",default=10,  type=int, help="Number of threads, default: 10")
     ATAC_Find_meme_subparser.add_argument("--nmotifs",default=3,  type=int, help="Number of motifs to extract, default: 3")
+    ATAC_Find_meme_subparser.add_argument("-db","--database",required=True,  type=str, help="Database file")
     # homer heatmap
     ATAC_homer_heatmap_subparser = ATAC_motif_subparser.add_parser('homer_heatmap', help='Plot the homer finding result heatmap')
     ATAC_homer_heatmap_subparser.add_argument("-i","--input",required=True, type=str, help="The homer results information csv file")
     ATAC_homer_heatmap_subparser.add_argument("-o","--output",required=True,type=str, help="The output directory")
     ATAC_homer_heatmap_subparser.add_argument("--motif",default='no',type=str, help="The specified motifs txt file")
-    ATAC_homer_heatmap_subparser.add_argument("--width",default=8,type=float, help="The plot width, default: 8")
-    ATAC_homer_heatmap_subparser.add_argument("--height",default=10,type=float, help="The plot height, default: 10")
+    ATAC_homer_heatmap_subparser.add_argument("--width",default=10,type=float, help="The plot width, default: 10")
+    ATAC_homer_heatmap_subparser.add_argument("--height",default=8,type=float, help="The plot height, default: 8")
     # enrich heatmap
     ATAC_enrich_heatmap_subparser = ATAC_motif_subparser.add_parser('enrich_heatmap', help='Perform the motif enriched heatmap')
-    ATAC_enrich_heatmap_subparser.add_argument("--motif_bed",required=True, type=str, help="The motif bed files directory")
-    ATAC_enrich_heatmap_subparser.add_argument("--bed",required=True, type=str, help="The input bed files directory")
-    ATAC_enrich_heatmap_subparser.add_argument("--motifs", required=True,type=str, help="Specify the motifs to plot, separate by ,")
-    ATAC_enrich_heatmap_subparser.add_argument("-o",required=True,type=str, help="The output directory")
-    ATAC_enrich_heatmap_subparser.add_argument("-t",default=12,type=int, help="The number of threads")
-    ATAC_enrich_heatmap_subparser.add_argument("--tag",default='CO,OC',type=str, help="The tag of bed files, default: CO,OC")
-    ATAC_enrich_heatmap_subparser.add_argument("--species",default='mm10',type=str, help="Species")
+    ATAC_enrich_heatmap_subparser.add_argument("--motif_bed",required=True, type=str, help="The motif bed file information csv file")
+    ATAC_enrich_heatmap_subparser.add_argument("--bed",required=True, type=str, help="The input bed file information csv file")
+    ATAC_enrich_heatmap_subparser.add_argument("-o","--output",required=True,type=str, help="The output directory")
+    ATAC_enrich_heatmap_subparser.add_argument("-t","--thread",default=12,type=int, help="The number of threads")
+    ATAC_enrich_heatmap_subparser.add_argument("-s","--species",required=True,type=str, help="Species")
 
     # ATAC: 5. Accessbility
     ATAC_accessbility_parser = ATAC_subparsers.add_parser('accessbility', help='ATAC accessbility analysis')
-    ATAC_accessbility_parser.add_argument("--bw",required=True, help="bw files, separate by ,")
-    ATAC_accessbility_parser.add_argument("-o", required=True, help="Output directory")
+    ATAC_accessbility_parser.add_argument("--bw",required=True, help="The input bw txt file")
+    ATAC_accessbility_parser.add_argument("-o","--output",required=True, help="Output directory")
     ATAC_accessbility_parser.add_argument("--mode", required=True, choices=["region", "gene"], help="Analysis mode: region/gene")
-    ATAC_accessbility_parser.add_argument("-i", required=True, help="Input gene region or gene list txt file")
+    ATAC_accessbility_parser.add_argument("-i","--input", required=True, help="Input gene region or gene list txt file")
     ATAC_accessbility_parser.add_argument("--species",help="Species",choices=list(config['data'].keys()))
     ATAC_accessbility_parser.add_argument("--method", choices=["sample", "region_list"], default="sample",help="Boxplot plotting method：sample/region list")
-    ATAC_accessbility_parser.add_argument("--center", help="Average profile alignment：region mode:peak/position，gene mode:TSS/TTS/whole")
+    ATAC_accessbility_parser.add_argument("--center",required=True, help="Average profile alignment：region mode:peak/position，gene mode:TSS/TTS/whole")
     ATAC_accessbility_parser.add_argument("--promoter_size", type=int, default=5000, help="Gene promoter region size, default: TSS upstream and downstream 5kb")
     ATAC_accessbility_parser.add_argument("--region_list",default='',help="Region list file for box plot") 
 
     # ATAC: 6. IGV snapshot
     ATAC_igv_parser = ATAC_subparsers.add_parser('igv', help='ATAC IGV snapshot')
-    ATAC_igv_parser.add_argument("-i",required=True, type=str, help="The input list file")
-    ATAC_igv_parser.add_argument("-o",required=True,type=str, help="Output directory")
+    ATAC_igv_parser.add_argument("-i","--input",required=True, type=str, help="The input list file")
+    ATAC_igv_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
     ATAC_igv_parser.add_argument("--genome", required=True, type=str, help="Select the genome id")
     ATAC_igv_parser.add_argument("--display_mode",default='collapse',help="Display mode", choices=["collapse","expand","squish"])
     ATAC_igv_parser.add_argument("--region",required=True,help="Specify the regions, separate by ,")
@@ -995,10 +1039,10 @@ def parse_arguments():
 
     # ATAC: 7. Correlation
     ATAC_correlation_parser = ATAC_subparsers.add_parser('correlation', help='ATAC correlation analysis')
-    ATAC_correlation_parser.add_argument("--bw_file1",required=True,help='Path to the first bw file')
-    ATAC_correlation_parser.add_argument("--bw_file2",required=True,help='Path to the second bw file')
-    ATAC_correlation_parser.add_argument("-o",required=True,help='Output directory')
-    ATAC_correlation_parser.add_argument("-t",type=int,default=30,help='Number of threads')
+    ATAC_correlation_parser.add_argument("--bw1",required=True,help='Path to the first bw file')
+    ATAC_correlation_parser.add_argument("--bw2",required=True,help='Path to the second bw file')
+    ATAC_correlation_parser.add_argument("-o","--output",required=True,help='Output directory')
+    ATAC_correlation_parser.add_argument("-t","--thread",type=int,default=30,help='Number of threads')
     ATAC_correlation_parser.add_argument("--region",help='Optional BED file for specific regions') 
 
     # HiC
@@ -1007,12 +1051,11 @@ def parse_arguments():
 
     # HiC: 1. Preprocess
     HiC_preprocess_parser = HiC_subparsers.add_parser('preprocess', help='HiC preprocess pipeline')
-    HiC_preprocess_parser.add_argument("-i","--input",required=True, type=str, help="Input fastq file directory")
+    HiC_preprocess_parser.add_argument("-i","--input",required=True, type=str, help="Input fastq file information file")
     HiC_preprocess_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
     HiC_preprocess_parser.add_argument('-s','--species',required=True,type=str, help='Specify the species',choices=list(config['data'].keys()))
     # Optional
     HiC_preprocess_parser.add_argument('-t','--thread',type=int,default=10,help="Number of thread, default:10")
-    HiC_preprocess_parser.add_argument('-l',type=int,help='1:Single sequencing, 2:Pair sequencing (default is 2)',choices=[1,2],default=2)
     HiC_preprocess_parser.add_argument('-f','--filter',action='store_true',help="Do stricter filtering, use parameters refering to Ruan's Lab")
     HiC_preprocess_parser.add_argument('-r','--resolution',type=str,default='10000,100000,1000000', help="Specify the resolutions, separate by comma, default: 10000,100000,1000000")
 
@@ -1079,14 +1122,14 @@ def parse_arguments():
     HiC_reconstruction_flamingo.add_argument("-o","--output", required=True,type=str, help="Output directory")
     HiC_reconstruction_flamingo.add_argument('--chr',required=True, help='The chromosome')
     HiC_reconstruction_flamingo.add_argument('--domain_res',required=True, help='The domain resolution')
-    HiC_reconstruction_flamingo.add_argument('--frag_res',required=True, help='The domain resolution')
-    HiC_reconstruction_flamingo.add_argument('--normalization',default='NONE', help='The domain resolution')
-    HiC_reconstruction_flamingo.add_argument('-t','--thread',type=int,default=10,help="Number of thread, default:10")
+    HiC_reconstruction_flamingo.add_argument('--frag_res',required=True, help='The fragment resolution')
+    HiC_reconstruction_flamingo.add_argument('--norm',default='NONE', help='The normalization method, default: NONE')
+    HiC_reconstruction_flamingo.add_argument('-t','--thread',type=int,default=10,help="Number of thread, default: 10")
     # HiCkit
     HiC_reconstruction_hickit = HiC_reconstruction_subparser.add_parser('hickit', help='HiCkit 3D reconstruction')
     HiC_reconstruction_hickit.add_argument('--r1',required=True, help='The hic read1 fastq compression file')
     HiC_reconstruction_hickit.add_argument('--r2',required=True, help='The hic read2 fastq compression file')
-    HiC_reconstruction_hickit.add_argument('--species',required=True,help='The paternal sample',choices=list(config['data'].keys()))
+    HiC_reconstruction_hickit.add_argument('--species',required=True,help='The species',choices=list(config['data'].keys()))
     HiC_reconstruction_hickit.add_argument("-o","--output", required=True,type=str, help="Output directory")
     HiC_reconstruction_hickit.add_argument("--prefix", type=str,default='result',help="Output prefix, default: result")
     HiC_reconstruction_hickit.add_argument('--vcf',default='',help='The SNP vcf compression file (optional)')
@@ -1118,18 +1161,17 @@ def parse_arguments():
     HiC_compare_parser.add_argument('--hic2', type=str, required=True, help="The second hic file")
     HiC_compare_parser.add_argument('-o','--output',type=str,required=True,help="Specify the output directory")
     HiC_compare_parser.add_argument('--chr',type=str,required=True,help="Specify the chromosome")
+    HiC_compare_parser.add_argument('--A_min',type=float,default=None,help="The average expression to filter out interactions, default: None")
 
     return parser.parse_args()
 
 def main():
-    # 解析命令行参数
     args = parse_arguments()
 
-    # 判断并执行 bulkRNA 相关子命令
     if args.omics == 'bulkRNA':
         if args.bulkRNA_command == 'preprocess':
             bulkRNA_preprocess(args)
-        elif args.bulkRNA_command == 'QC':
+        elif args.bulkRNA_command == 'correlation':
             bulkRNA_QC(args)
         elif args.bulkRNA_command == 'DEG':
             bulkRNA_DEG(args)
@@ -1195,3 +1237,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

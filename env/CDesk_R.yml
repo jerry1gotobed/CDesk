@@ -1,4 +1,4 @@
-# CDesk_R.yml
+# CDesk_env.yaml
 name: CDesk_R
 channels:
   - conda-forge
@@ -7,6 +7,8 @@ channels:
 dependencies:
   - cmake
   - r-base=4.3
+  - r-r.utils
+  - r-argparse
   - r-seurat
   - r-xml
   - r-devtools
@@ -18,6 +20,8 @@ dependencies:
   - r-monocle3
   - r-tidyverse
   - r-biocmanager
+  - dnachun::r-cellchat
+  - dnachun::r-nmf
   - bioconductor-limma
   - bioconductor-deseq2
   - bioconductor-edger
@@ -42,3 +46,15 @@ dependencies:
   - r-ggsignif
   - bioconductor-tadcompare
   - r-strawr
+  - bioconda::bioconductor-genefilter
+  - r-msigdbr
+  - r-clustree
+  - r-optparse
+  - r-presto
+  - conda-forge::r-harmony
+  - bioconductor-regioner
+  - bioconductor-bsgenome.mmusculus.ucsc.mm10
+  - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
+  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-bsgenome.ggallus.ucsc.galgal6
+  - bioconductor-bsgenome.rnorvegicus.ucsc.rn7

@@ -7,10 +7,10 @@ import subprocess
 import shutil
 import chardet
 import sys
+from datetime import datetime
 
 # Check tools
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 tools = ['gfold','samtools']
@@ -24,72 +24,75 @@ config_path = os.environ.get('CDesk_config')
 def gfoldMode(args): 
     # Load parameters
     species = getGTF(args.species,config_path)
-    input_dir = args.input_dir
     output_dir = args.output_dir
     meta_file = args.meta_file
     plot = bool(args.plot)
     goi = args.gene_of_interest
     fc_threshold = float(args.fc_threshold)
-    cnt_path = args.readcnt
     top_num = int(args.top_genes)
     thread = int(args.thread)
     width = float(args.width)
     height = float(args.height)
-    # Load the bam files in input directory
-    bam_files = [os.path.join(input_dir,f) for f in os.listdir(input_dir) if f.endswith('.bam')]
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-        print(f"Make folder: {output_dir}")
-    else:
-        print(f"Folder already exists: {output_dir}")
     if not os.path.exists(os.path.join(output_dir,"readCnt")):    
         os.makedirs(os.path.join(output_dir,"readCnt"))
     if not os.path.exists(os.path.join(output_dir,"diff")):
         os.makedirs(os.path.join(output_dir,"diff"))
 
     # Check speices
-    if species:
-        print(f"Species gtf file is specified as {species}, GTF file will be used for mapping gene IDs to gene names")
-    else:
+    if not species:
         print(f"Species gtf file not exist!")
-        return
+        sys.exit(1)
    
     with open(meta_file, 'rb') as f:
         result = chardet.detect(f.read(1000))  # Check encoding
         encoding = result['encoding']
-    meta_test = pd.read_csv(meta_file, sep=None, engine='python', encoding=encoding,header=0,index_col=0)
-    bam_samples = [os.path.splitext(os.path.basename(f))[0] for f in os.listdir(input_dir) if f.endswith('.bam')]
-    missing_elements = set(meta_test.index) - set(bam_samples)
-    bam_samples = list(set(meta_test.index) & set(bam_samples))
-    # Check whether bam files in meta file exist
-    bam_files = [path for path in bam_files if path.split('/')[-1].split('.')[0] in bam_samples]
-    if missing_elements:
-        raise ValueError(f"Can not find the bam file of {missing_elements} in the meta file")
+    meta_test = pd.read_csv(meta_file, sep=None, engine='python', encoding=encoding,header=0)
+    required = ["sample", "group","bam"]
+    missing = set(required) - set(meta_test.columns)
+    if missing:
+        print('Need columns: sample,group,bam')
+        sys.exit(1)
+    for bam in meta_test['bam']:
+        if not os.path.exists(bam):
+            print(f'Can not find {bam}')
+            sys.exit(1)
+    if 'readcnt' in meta_test.columns:
+        for readcnt in meta_test['readcnt']:
+            if not os.path.exists(readcnt):
+                print(f'Can not find {readcnt}')
+                sys.exit(1)
 
     # Read the meta file 
     metas = readMetaFile(meta_file)
     
     # Bam -> count matrix
-    gfoldBam2Cnt(bam_files=bam_files, species=species, output_dir=output_dir,config_path=config_path,cnt_path=cnt_path,plot=plot,thread=thread)
+    gfoldBam2Cnt(meta=meta_test, species=species, output_dir=output_dir,thread=thread)
     
     # Differential analysis
+    print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Start gfold analysis")
     for meta in metas:
-        result = gfoldAnalysis(meta=meta,goi=goi,plot=plot,output_dir=output_dir,config_path=config_path,fc_threshold=fc_threshold,width=width,height=height)
+        result = gfoldAnalysis(meta=meta,goi=goi,plot=plot,output_dir=output_dir,fc_threshold=fc_threshold,width=width,height=height)
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if plot:
+        print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Do MD plot and plot heatmap")
         cmd = ['Rscript',os.path.join(script_dir,'gfold_plot.R'),'heatmap',os.path.join(output_dir,'fpkm.csv'),goi,meta_file,str(top_num),output_dir,str(width),str(height)]
         subprocess.run(cmd)
     return
 
-def gfoldBam2Cnt(bam_files:list, species:str, output_dir:str,cnt_path:str,plot:bool,thread:int):
+def gfoldBam2Cnt(species:str, output_dir:str,thread:int,meta: pd.DataFrame):
     # bam->read_cnt
     processes = []
-    for file in bam_files:
-        name = file.split("/")[-1].split(".")[0]
+    for idx, row in meta.iterrows():
+        name = row['sample']
         output_read_cnt = os.path.join(output_dir, 'readCnt', name + '.read_cnt')
-        input_read_cnt = os.path.join(cnt_path, name + '.read_cnt')
+        if 'readcnt' in row.index:
+            input_read_cnt = row['readcnt']
+        else:
+            input_read_cnt = ''
 
         # Check whether .read_cnt file exists，skip if exists
         if os.path.exists(output_read_cnt):
@@ -101,12 +104,10 @@ def gfoldBam2Cnt(bam_files:list, species:str, output_dir:str,cnt_path:str,plot:b
             shutil.copy(input_read_cnt, output_read_cnt)
             continue
         
+        file = row['bam']
+        print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Tranfer from bam to readcnt format for {name}")
         cmd = f"samtools view -@ {thread} {file} | gfold count -ann {species} -tag stdin -o {output_read_cnt} > /dev/null 2>&1"
-        processes.append(subprocess.Popen(cmd, shell=True))
-    
-    # Wait all processes, merge all the results to a count matrix
-    for p in processes:
-        p.wait()
+        subprocess.run(cmd, shell=True)
     
     # Initialize an empty DataFrame
     combined_count_df = pd.DataFrame()
@@ -180,16 +181,15 @@ def readMetaFile(meta):
     # Read the meta file
     df = pd.read_csv(meta, sep=None, engine='python', encoding=encoding,header=0,index_col=0)
     result = []
-    for column in df.columns[1:]:
-        # Get the value of this column
-        values = df[column]
-        
-        # Generate the list of sample names for the experimental group and the control group
-        treatment_groups = values.index[values==1].to_list()
-        control_groups = values.index[values==-1].to_list()
-        
-        # Create a tuple and add it to the result list
-        result.append((str(column), treatment_groups, control_groups))
+    for column in df.columns:
+        if column not in ['sample','group','readcnt','bam']:
+            # Get the value of this column
+            values = df[column]
+            # Generate the list of sample names for the experimental group and the control group
+            treatment_groups = values.index[values==1].to_list()
+            control_groups = values.index[values==-1].to_list()
+            # Create a tuple and add it to the result list
+            result.append((str(column), treatment_groups, control_groups))
     return result
 
 def getGTF(species,config_path):
@@ -198,27 +198,15 @@ def getGTF(species,config_path):
     gtf = config['data'][species]['refseq_gtf']
     return gtf
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for gfold differential expression gene detection & analysis")
-    
-    parser.add_argument(
-        '--input_dir', '-i', 
-        type=str,
-        required=True, 
-        help="Input bam file directory for GFOLD")
     
     parser.add_argument(
         '--species', '-s', 
         type=str, 
         default="mouse", 
         help='Species for choosing .gtf for mapping gene id to gene name'
-    )
-
-    parser.add_argument(
-        '--readcnt',
-        type=str,
-        default='',
-        help='Provide the readcnt file directory (optional)'
     )
 
     parser.add_argument(

@@ -1,3 +1,4 @@
+
 #!/usr/bin/env Rscript
 suppressMessages(library(argparse))
 suppressMessages(library(dplyr))
@@ -38,15 +39,15 @@ if (!args$group_by %in% colnames(data_integrated@meta.data)){
 }
 
 # 防止因为全是数字而报错
-if (grepl('cluster',args$group_by)){
-  data_integrated@meta.data$seurat_clusters <- factor(paste0("c", data_integrated@meta.data$seurat_clusters))
-}
-#data_integrated$celltype <- data_integrated@active.ident
-data_integrated <- SetIdent(data_integrated, value = data_integrated@meta.data[[args$group_by]])
-
+v <- data_integrated@meta.data[[args$group_by]]
+v_char <- as.character(v)
+is_num <- !is.na(suppressWarnings(as.numeric(v_char)))
+v_char[is_num] <- paste0("c", v_char[is_num])
+data_integrated@meta.data[[args$group_by]] <- v_char
+Idents(data_integrated) <- data_integrated@meta.data[[args$group_by]]
 
 # 创建CellChat对象
-cellchat <- createCellChat(data_integrated@assays$RNA@data, meta = data_integrated@meta.data, group.by = args$group_by)
+cellchat <- createCellChat(data_integrated[["RNA"]]$data, meta = data_integrated@meta.data, group.by = args$group_by)
 groupSize <- as.numeric(table(cellchat@idents))
 
 # 导入配体受体数据库
@@ -89,9 +90,9 @@ groupSize <- as.numeric(table(cellchat@idents))
 
 pdf(file = paste0(args$output_directory, "/cell_net_circle.pdf"), width=args$width, height=args$height)
 par(mfrow = c(1,2), xpd=TRUE)
-netVisual_circle(cellchat@net$count, vertex.weight = groupSize, weight.scale = TRUE, 
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, weight.scale = TRUE,
                  label.edge = FALSE, title.name = "Number of interactions")
-netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, weight.scale = TRUE, 
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, weight.scale = TRUE,
                  label.edge = FALSE, title.name = "Interaction weights/strength")
 while (!is.null(dev.list()))  dev.off()
 

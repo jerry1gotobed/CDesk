@@ -96,7 +96,7 @@ if (method=='heatmap'){
   k1 <- diff$GFOLD > gfold_thre
   k2 <- diff$GFOLD < -gfold_thre
   diff$sig <- ifelse(k1, "Up", ifelse(k2, "Down", "NotSig"))
-  
+  diff <- diff %>% arrange(sig != "NotSig") 
   # Count
   up_count <- sum(diff$sig == "Up")
   down_count <- sum(diff$sig == "Down")
@@ -117,7 +117,9 @@ if (method=='heatmap'){
     gene = trimws(readLines(gene))
   }
   missing = setdiff(gene,diff$Gene)
-  cat('Gene not in result:',missing,'\n')
+  if (length(missing) > 0 && gene != "NO"){
+      cat('Gene not in result:',missing,'\n')
+  }
   mark = gene[gene%in%diff$Gene]
   diff$label <- ifelse(diff$Gene %in% mark, diff$Gene, NA)
   
@@ -151,8 +153,8 @@ if (method=='heatmap'){
                     show.legend=FALSE,
                     max.overlaps = Inf,na.rm = TRUE) +
     theme_bw() +
-    geom_hline(yintercept = 0, linetype = 1, color = "blue", size = 0.8) +
-    geom_hline(yintercept = c(-gfold_thre, gfold_thre), linetype = 2, color = "black", size = 0.6)+ theme(
+    geom_hline(yintercept = 0, linetype = 1, color = "blue", linewidth = 0.8) +
+    geom_hline(yintercept = c(-gfold_thre, gfold_thre), linetype = 2, color = "black", linewidth = 0.6)+ theme(
       panel.grid.major = element_blank(),  
       panel.grid.minor = element_blank(),  
       panel.background = element_blank(),   

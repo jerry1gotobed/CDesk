@@ -33,8 +33,7 @@ def parse_arguments():
     parser.add_argument("--center", help="average_profile对齐方式：region模式可选peak/position，gene模式可选TSS/TTS/whole/peak")
     parser.add_argument("--promoter_size", type=int, default=5000, help="基因启动子区域大小（默认：TSS上下游各5kb）")
     #parser.add_argument("--threads","-t", type=int, default=4, help="使用的CPU线程数（默认：4）")
-    parser.add_argument("config_path", help="配置信息文件")
-    
+        
     args = parser.parse_args()
     
     # 参数验证
@@ -939,7 +938,8 @@ def plot_boxplot_region_list(signal_df, region_groups, output_file, region_id_co
 def main():
     # 解析命令行参数
     args = parse_arguments()
-    with open(args.config_path, "r") as f:
+    config_path = os.environ.get('CDesk_config')
+    with open(config_path, "r") as f:
         config = json.load(f)
 
     if args.species!= None:

@@ -10,7 +10,6 @@ import matplotlib.cm as mpm
 from matplotlib.patches import PathPatch
 from matplotlib.font_manager import fontManager
 from itertools import product, combinations, chain
-from PyPDF2 import PdfFileMerger
 from tqdm import tqdm
 from math import ceil
 import numpy as np
@@ -45,6 +44,7 @@ def exec_cmd(cmd):
         shell=True,
         universal_newlines=True
     )
+    output_lines = []
     while True:
         buff = pipe.stdout.readline()
         if (buff == '') and (pipe.poll() != None): # 无输出，且poll不是0成功/1错误
@@ -52,7 +52,19 @@ def exec_cmd(cmd):
         buff = buff.strip()
         if buff == '':
             continue
+        line = buff.rstrip()
+        output_lines.append(line)
         #logger.info(buff)
+    retcode = pipe.poll()
+    if retcode != 0:
+        # 命令执行出错，打印错误信息
+        err_text = "\n".join(output_lines)
+        logger.error(f"Command failed (exit code {retcode}): {cmd}")
+        logger.error("=== Begin command output ===")
+        logger.error(err_text)
+        logger.error("===  End command output  ===")
+        # 抛出异常，或 sys.exit(retcode)
+        os._exit(retcode)
 
 # 记录bed文件行数
 def region_num(file_path: str):
@@ -92,11 +104,11 @@ def multi_task(func_list: list, arg_list: List[dict], task_num: int = None):
     bar.close()
 
 # XX vs XX.txt;进行区域重叠的随机化检验 (Permutation Test)。它的主要目的是对两个基因组区域集合（A 和 B）之间的重叠进行统计分析
-def enrich(file_bed_a: str, file_bed_b: str, dir_result: str, title: str, species: str,config):
+def enrich(file_bed_a: str, file_bed_b: str, dir_result: str, title: str, species: str):
     if os.path.exists(os.path.join(dir_result, "{}.txt".format(title))):
         return
     r_str = """
-library(regioneR)
+suppressMessages(library(regioneR))
 
 setwd("{4}")
 
@@ -140,10 +152,16 @@ write.table(
     exec_cmd("rm -rf {}".format(file_r))
 
 # 进程数
-def enrich_main(file_bed_dict: dict, dict_type_name: str, tag:str,species:str,config,task_num: int = 12):
+def enrich_main(file_bed_dict: dict, dict_type_name: str,species:str,task_num: int = 12):
     global palette, dir_base, dir_cooc
     # now（MotifAll文件夹）和base文件夹
-    tags = tag.split(',')
+    beds = pd.read_csv(dir_cooc)
+    if 'tag' not in beds.columns or 'bed' not in beds.columns or 'group' not in beds.columns:
+        print('Need columns: bed,tag,group')
+        sys.exit(1)
+    if not beds['tag'].is_unique:
+        print('Duplicates in tag column')
+        sys.exit(1)
     dir_enrich_now = os.path.join(dir_base, dict_type_name)
     os.makedirs(dir_enrich_now, exist_ok=True)
     dir_enrich_base = os.path.join(dir_base, "base")
@@ -154,26 +172,18 @@ def enrich_main(file_bed_dict: dict, dict_type_name: str, tag:str,species:str,co
         if not os.path.exists(file_bed_temp):
             exec_cmd("cat {} | cut -f 1-3 | sort -k1,1 -k2,2n | uniq | {} merge -i - > {}".format(
                 file_bed_dict[bed_name],
-                config['software']['bedtools'],
+                'bedtools',
                 file_bed_temp
             ))
         file_bed_dict[bed_name] = file_bed_temp
     # 这里获重新merge了CO和OC，放在base文件夹；有没有都可以吧 ##########################
-    bed_dict = list(map(
-        lambda d: (d[:-4].split('_')[-1], os.path.join(dir_cooc, d)),
-        [f for f in os.listdir(dir_cooc) if f.endswith(".bed")]
-    ))
-    bed_dict = [f for f in bed_dict if any(f[0].startswith(j) for j in tags)]
-    bed_dict.sort(key=lambda d: d[0], reverse=True)
-    bed_dict = dict(bed_dict)
-    if len(bed_dict) == 0:
-        print("没有满足条件的bed文件")
+    bed_dict = dict(zip(beds['tag'], beds['bed']))
     for bed_name in bed_dict:
         file_bed_temp = os.path.join(dir_enrich_base, "{}.bed".format(bed_name))
         if not os.path.exists(file_bed_temp):
             exec_cmd("cat {} | cut -f 1-3 | sort -k1,1 -k2,2n | uniq | {} merge -i - > {}".format(
                 bed_dict[bed_name],
-                config['software']['bedtools'],
+                'bedtools',
                 file_bed_temp
             ))
         bed_dict[bed_name] = file_bed_temp
@@ -190,8 +200,7 @@ def enrich_main(file_bed_dict: dict, dict_type_name: str, tag:str,species:str,co
                 file_bed_b=file_bed_dict[bed_name_b],
                 dir_result=dir_enrich_now,
                 title="{}_vs_{}".format(bed_name_a, bed_name_b),
-                species=species,
-                config=config['R_lib']
+                species=species
             ))
             file_list.append("{}_vs_{}.txt".format(bed_name_a, bed_name_b))
     multi_task(func_list, args_list, task_num)
@@ -227,7 +236,7 @@ def enrich_main(file_bed_dict: dict, dict_type_name: str, tag:str,species:str,co
                 random.randint(100000, 999999)
             )
             exec_cmd("{} -wa -a {} -b {} | sort | uniq > {}".format(
-                config['software']['intersectBed'],
+                'intersectBed',
                 se["filea"],
                 se['fileb'],
                 file_temp
@@ -250,9 +259,8 @@ def enrich_main(file_bed_dict: dict, dict_type_name: str, tag:str,species:str,co
     df = df[df["b"].isin(tuple(file_bed_dict.keys()))]
     df["b_index"] = df["b"].map(lambda d: tuple(file_bed_dict.keys()).index(d))
     df.sort_values(["a", "b_index"], inplace=True)
-    regex_pattern = '|'.join(tags)
-    # 动态提取 tags 列表中的元素，并存放到新列
-    df['tag'] = df['a'].str.extract(f'({regex_pattern})')
+    mapping = beds.set_index("tag")["group"].to_dict()
+    df["tag"] = df["a"].map(mapping)
 
     df_all = df.copy()
 
@@ -366,12 +374,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run ATAC sample replicate correlation")
     parser.add_argument("--motif_bed",required=True, type=str, help="The motif bed files directory")
     parser.add_argument("--bed",required=True, type=str, help="The input bed files directory")
-    parser.add_argument("--motifs", required=True,type=str, help="Specify the motifs to plot, separate by ,")
     parser.add_argument("-o",required=True,type=str, help="The output directory")
     parser.add_argument("-t",default=12,type=int, help="The number of threads")
-    parser.add_argument("--tag",default='CO,OC',type=str, help="The tag of bed files, default: CO,OC")
     parser.add_argument("--species",default='mm10',type=str, help="Species")
-    parser.add_argument("config_path", help="Path to configuration file")
 
     return parser.parse_args()
 
@@ -380,16 +385,8 @@ args = parse_arguments()
 dir_base = os.path.abspath(args.o)
 dir_cooc = args.bed
 dir_motif = args.motif_bed
-with open(args.motifs, "r") as file:
-    # 使用 readlines() 逐行读取并去除换行符
-    motifs = [line.strip() for line in file.readlines()]
 threads = args.t
-tag = args.tag
 species = args.species
-config_path = args.config_path
-
-with open(args.config_path, "r") as f:
-    config = json.load(f)
 
 # 确保路径存在
 os.makedirs(dir_base, exist_ok=True)
@@ -400,29 +397,12 @@ os.chdir(dir_base)
 global palette
 palette = "#16557A\n#C7A609\n#87C232\n#008792\n#A14C94\n#15A08C\n#8B7E75\n#1E7CAF\n#46489A\n#0F231F\n#1187CD\n#b7704f\n#596032\n#2570a1\n#281f1d\n#de773f\n#525f42\n#2585a6\n#2f271d\n#c99979\n#5f5d46\n#1b315e\n#1d1626\n#16557A\n#C7A609\n#87C232\n#008792\n#A14C94\n#15A08C\n#8B7E75".split("\n")
 
-print(f"使用目录路径:")
-print(f"  Output directory: {dir_base}")
-print(f"  Input bed files directory: {dir_cooc}")
-print(f"  Motif bed files directory: {dir_motif}")
-print(f"使用motifs: {motifs}")
-
-# 获取motif bed文件字典
-try:
-    file_bed_dict = dict(map(
-        lambda d: (d[:-4], os.path.join(dir_motif, d)),
-        os.listdir(dir_motif)
-    ))
-except FileNotFoundError:
-    print(f"错误: 目录 {dir_motif} 不存在")
+df = pd.read_csv(dir_motif, sep=",")
+if 'motif' not in df.columns or 'bed' not in df.columns:
+    print('Need columns: motif,bed')
     sys.exit(1)
 
-# 仅保留配置中指定的motif
-filtered_bed_dict = {i: file_bed_dict[i] for i in motifs if i in file_bed_dict}
-
-# 如果有些motif在motif_beds目录中不存在，打印警告
-for motif in motifs:
-    if motif not in file_bed_dict:
-        print(f"警告: 在{dir_motif}中找不到motif '{motif}'对应的bed文件")
+filtered_bed_dict = dict(zip(df['motif'], df['bed']))
 
 if not filtered_bed_dict:
     print("错误: 没有找到任何指定的motif对应的bed文件")
@@ -433,9 +413,7 @@ enrich_main(
     file_bed_dict=filtered_bed_dict,
     dict_type_name="MotifAll",
     task_num=threads,
-    tag=tag,
-    species = species,
-    config = config
+    species = species
 )
 
-print('运行完成，可以查看结果了')
+print('Done, you can see the results now.')

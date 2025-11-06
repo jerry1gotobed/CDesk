@@ -23,7 +23,7 @@ scv.settings.presenter_view = True  # set max width size for presenter view
 scv.set_figure_params('scvelo')  # for beautified visualization
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Run WGCNA analysis with given input files.")
+    parser = argparse.ArgumentParser(description="Run scRNA velocity")
     
     parser.add_argument("--cellranger_output", type=str, help="Input cellranger output directory")
     parser.add_argument("--gtf",default='',type=str, help="Input gtf file")
@@ -39,14 +39,16 @@ def parse_arguments():
     parser.add_argument("--meta", type=str, help="Meta column used")
     parser.add_argument("--width", type=int,default=10 ,help="Plot width, default: 10")
     parser.add_argument("--height", type=int, default=10,help="Plot height, default: 10")
-    parser.add_argument("--config",type=str, help="The config file")
     return parser.parse_args()
 
 def main():
     # 解析命令行参数
     args = parse_arguments()
-    with open(args.config, "r") as f:
+
+    config = os.environ.get('CDesk_config')
+    with open(config, "r") as f:
         config = json.load(f)
+
     output_dir = args.o
     threads = int(args.t)
     os.makedirs(output_dir, exist_ok=True)
@@ -56,6 +58,7 @@ def main():
     plot_width = int(args.width)
     plot_height = int(args.height)
     pl.rcParams["figure.figsize"] = (plot_width,plot_height)
+    
     # velocity分析
     # 先判断有没有生成好的结果
     cellranger_result = args.cellranger_output
@@ -70,8 +73,16 @@ def main():
             print('Please provide gtf file')
             sys.exit(1)
         gtf = args.gtf
-        cmd = [config['software']['velocyto'],'run10x',cellranger_result,gtf,'-@',str(threads),'--verbose','-v']
-        subprocess.run(cmd, check=True)
+        cmd = ['velocyto','run10x',cellranger_result,gtf,'-@',str(threads),'--verbose','-v']
+        log_path = os.path.join(output_dir,'velocyto.log')
+        print('Run velocyto ...')
+        with open(log_path, 'w') as logfile:
+            subprocess.run(
+                cmd,
+                stdout=logfile,          # 标准输出写入 logfile
+                stderr=subprocess.STDOUT,# 标准错误也合并到 logfile
+                check=True
+            )
         temp = os.path.join(cellranger_result,'velocyto')
         files = os.listdir(temp)
         if len([f for f in files if f.endswith('.loom')]) == 0:

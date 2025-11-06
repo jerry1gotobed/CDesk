@@ -13,7 +13,7 @@ THREAD=8
 
 tools=("bamCoverage")
 missing_tools=()
-echo "Checking required tools..."
+
 for tool in "${tools[@]}"; do
     if ! command -v "$tool" &>/dev/null; then
         missing_tools+=("$tool")
@@ -64,19 +64,21 @@ if [ ! -d "${OUTPUT_DIRECTORY}" ]; then
     mkdir ${OUTPUT_DIRECTORY}
 fi
 
+QC_path=$(dirname "${OUTPUT_DIRECTORY}")/Log  
+
 get_time(){
     printf "%-19s" "`date +\"%Y-%m-%d %H:%M:%S\"`"
 }
 
 counter=0
+echo " "
+echo "----------------------------- Start generating BW files---------------------------"
 for FILE in ${INPUT_DIRECTORY}/*.bam; do
     ((counter++))
 
-    echo "Number ${counter} sample~~~~~~~~~"
-    echo "----------------------------- Start generating BW files for ${FILE} ---------------------------"
-    echo "128 `get_time` bamCoverage ..."
+    echo "Number ${counter} sample: ${FILE}"
+    echo "`get_time` bamCoverage ..."
 
     SAMPLE=$(basename ${FILE} .bam)
-    bamCoverage -p ${THREAD} -b ${FILE} -o ${OUTPUT_DIRECTORY}/${SAMPLE}.bw
+    bamCoverage -p ${THREAD} -b ${FILE} -o ${OUTPUT_DIRECTORY}/${SAMPLE}.bw > ${QC_path}/${SAMPLE}.BW.log 2>&1
 done
-

@@ -85,8 +85,12 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
   if (! meta_col %in% colnames(data@meta.data)){
     stop(paste0(meta_col,'not in meta.data column'))
   } 
-  Idents(data) <- data@meta.data[[meta_col]]
   
+  Idents(data) <- data@meta.data[[meta_col]]
+  ids <- Idents(data)
+  new_ids <- paste0("C", as.character(ids))
+  Idents(data)  <- new_ids
+
   common_genes <- intersect(rownames(data),meta_info$Marker)
   data <- data[common_genes,]
   meta_info <- meta_info[meta_info$Marker %in% common_genes,]
@@ -97,7 +101,7 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
   
   result_df <- as.data.frame(matrix(0, nrow = length(unique(meta_info$Celltype)), ncol = length(unique(data@meta.data[[meta_col]]))))
   rownames(result_df) <- unique(meta_info$Celltype)
-  colnames(result_df) <- unique(data@meta.data[[meta_col]])
+  colnames(result_df) <- levels(Idents(data))
   
   # 得到每个cluster的celltype
   for (type in unique(meta_info$Celltype)) {
@@ -106,7 +110,7 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
       data,
       features = marker,
       assays = "RNA",  # 默认是"RNA"，如果是其他assay请修改
-      slot = "data"    # 使用标准化数据（log1p），如果用原始counts则用"counts"
+      layer = "data"    # 使用标准化数据（log1p），如果用原始counts则用"counts"
     )
     
     # 计算平均表达量
@@ -141,7 +145,7 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
   
   result_df <- result_df[, colSums(result_df != 0) > 0]
   for (i in colnames(result_df)) {
-    temp_cell <- colnames(data[,data@meta.data[[meta_col]]==i])
+    temp_cell <- colnames(data[,Idents(data)==i])
     temp_file <- data.frame(
       Cell=temp_cell,
       PredCelltype=rownames(result_df)[which.max(result_df[, i])]
@@ -156,7 +160,7 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
 #data_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/qry_data.rds"
 #save_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3c"
 #cluster_type <- "tsne"
-PlotData <- function(data_path, save_path, cluster_type,mode){
+PlotData <- function(data_path, save_path, cluster_type,mode,width,height){
   data <- readRDS(data_path)
   
   PredCelltype_df <- read.table(paste0(save_path,"/PredCelltype.txt"), sep = "\t", header = T)
@@ -164,7 +168,7 @@ PlotData <- function(data_path, save_path, cluster_type,mode){
   
   # samples
   p <- DimPlot(data,reduction=cluster_type,label=T,group.by = "PredType")
-  ggsave(paste0(save_path,"/PredCelltype.",cluster_type,".pdf"),p,width = 7,height = 6)	
+  ggsave(paste0(save_path,"/PredCelltype.",cluster_type,".pdf"),p,width = width,height = height)	
 }
 
 ###################################################################################################
@@ -191,9 +195,10 @@ if (mode=='marker') {
   print(paste0("marker_percentage is ", marker_percentage))
   cluster_type <- args[9]
   print(paste0("cluster_type is ", cluster_type))
-  
+  width <- as.numeric(args[10])
+  height <- as.numeric(args[11])
   MarkerAnnotation(data_path, meta_info_path, meta_col, save_path, expression_thre, percentage_thre, marker_percentage)
-  PlotData(data_path, save_path, cluster_type,mode)
+  PlotData(data_path, save_path, cluster_type,mode,width,height)
 
 } else if (mode=='transfer') {
   ref_path <- args[2]
@@ -214,8 +219,10 @@ if (mode=='marker') {
   print(paste0("nfeatures : ", nfeatures_used))
   dims_used <- as.numeric(args[8])
   print(paste0("dims : ", dims_used))
+  width <- as.numeric(args[9])
+  height <- as.numeric(args[10])
   TransferLabelAnnotation(ref_path, qry_path, ref_meta, save_path,nfeatures_used,dims_used)
-  PlotData(qry_path, save_path, cluster_type,mode)
+  PlotData(qry_path, save_path, cluster_type,mode,width,height)
 }
 
 cat('Finished! You can check the result now\n')

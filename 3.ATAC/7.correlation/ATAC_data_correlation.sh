@@ -1,6 +1,4 @@
 #!/bin/bash
-config_json=${!#}
-
 # 检查参数数量
 if [ "$#" -lt 2 ] || [ "$#" -gt 6 ]; then
     echo "Usage: $0 <bw_file1> <bw_file2> <output_directory> <threads> [region_file] <config>"
@@ -20,9 +18,6 @@ THREAD=$(echo $4)
 if [ "$#" -gt 5 ]; then
     region=$(echo $5|sed -e "s/.*\///g" -e "s/\.bed$//g" -e "s/\.bedgraph//g")
 fi
-
-multiBigwigSummary=$(jq -r '.software.multiBigwigSummary' $config_json)
-R_lib=$(jq -r '.R_lib' $config_json)
 
 # 定义输出文件路径
 out_npz="$OUTPUT_DIRECTORY/${bw1}_vs_${bw2}.npz"
@@ -55,14 +50,14 @@ SCRIPT_DIR=$(dirname $(realpath $0))
 # 执行 multiBigwigSummary 命令
 if [ -z "$region" ]; then
     # 默认 bins 模式
-    $multiBigwigSummary bins -b $1 $2 --labels $bw1 $bw2  -p $THREAD -o $out_npz --outRawCounts $out_txt
+    multiBigwigSummary bins -b $1 $2 --labels $bw1 $bw2  -p $THREAD -o $out_npz --outRawCounts $out_txt
     sed -i "s/#//g;s/'//g" $out_txt
-    Rscript ${SCRIPT_DIR}/atac.correlationplot.R $out_txt $R_lib
+    Rscript ${SCRIPT_DIR}/atac.correlationplot.R $out_txt
     echo "Bins mode completed. Output files: $out_npz and $out_txt"
 else
     # 使用指定的 region 文件
-    $multiBigwigSummary bins -b $1 $2 --labels $bw1 $bw2 -p $THREAD -o $out_peak_npz --BED $5  --outRawCounts $out_peak_txt
+    multiBigwigSummary bins -b $1 $2 --labels $bw1 $bw2 -p $THREAD -o $out_peak_npz --BED $5  --outRawCounts $out_peak_txt
     sed -i "s/#//g;s/\\'//g" $out_peak_txt
-    Rscript ${SCRIPT_DIR}/atac.correlationplot.R $out_peak_txt $R_lib
+    Rscript ${SCRIPT_DIR}/atac.correlationplot.R $out_peak_txt
     echo "Region mode completed. Output files: $out_peak_npz and $out_peak_txt"
 fi

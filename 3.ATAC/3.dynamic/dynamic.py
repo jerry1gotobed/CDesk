@@ -42,7 +42,7 @@ def get_samples(file_meta: str,important_index: int):
     # 读取文件
     df = pd.read_csv(file_meta, sep=None, engine='python', encoding=encoding)
     df.fillna("", inplace=True)
-    assert tuple(df.columns) == ("sample", "tag_time", "tag_group"), "meta file columns error!"
+    assert tuple(df.columns) == ("sample", "tag_time", "tag_group","bw","peak"), "meta file columns error!"
     assert len(df) == len(df["sample"].unique()), "sample dumplates !"
     assert len(set(df["tag_group"].unique()) - head_tail_names) <= 2, "Only less than 2 tag groups accepted"
 
@@ -105,27 +105,8 @@ def get_samples(file_meta: str,important_index: int):
 
     return samples_pat_type, samples_pat, samples_pat_samples, samples_need, samples_pat_last, samples_time, samples_head_tail, samples_group, list(samples_group.keys())[important_index]
 
-# 查找对应样本的结尾文件，缺失或重复则报错
-def get_ext_files(dir_path: str, ext: str,samples_need):
-    #nonlocal samples_need
-    res = dict()
-    end_str = "{}".format(ext)
-    for root, _, files in os.walk(dir_path):
-        for file_single in files:
-            if not file_single.endswith(end_str):
-                continue
-            file_name = file_single[:-len(end_str)]
-            if file_name not in samples_need:
-                continue
-            assert file_name not in res, "{} {} duplicate: {}, {}".format(file_name, end_str, res[file_name], os.path.join(dir_path, root, file_single))
-            res[file_name] = os.path.join(root, file_single)
-
-    sample_gap = set(samples_need) - set(res.keys())
-    assert len(sample_gap) == 0, "sample missing: {}".format(sample_gap)
-    return list(res.values())
-
 # 得到一个merge.ov.bed，记录每个样本文件在合并bed的交集次数
-def bed_combine(bed_file: List[str], ext_len: int, result_dir: str, tmp_dir: str, config:str,need_head: bool = True, file_name_tag: str = "", force: bool = True):
+def bed_combine(meta,result_dir: str, tmp_dir: str, config:str,need_head: bool = True, file_name_tag: str = "", force: bool = True):
     """ 将bed合并
     """
     global samples_head_tail, samples_group, important_group
@@ -136,7 +117,8 @@ def bed_combine(bed_file: List[str], ext_len: int, result_dir: str, tmp_dir: str
     # 已运行过就不再运行
     if os.path.exists(res_txt_file) and (not force):
         return res_txt_file
-
+    
+    bed_file = list(meta['peak'])
     # merge
     os.system("cat {} > {}".format(
         " ".join(bed_file),
@@ -144,21 +126,20 @@ def bed_combine(bed_file: List[str], ext_len: int, result_dir: str, tmp_dir: str
     ))
     os.system("cut -f 1-3 {} | sort -k1,1 -k2,2n | {} merge -i - > {}".format(
         tmp_cat_file,
-        config['software']['bedtools'],
+        'bedtools',
         tmp_merge_file
     ))
 
     #得到每个文件与merge的交集次数
     cmd = ""
-    header = list()
+    header = list(meta['sample'])
     for bed_file_temp in bed_file:
         cmd = "{}| {} -c -a - -b {}".format(
             cmd,
-            config['software']['intersectBed'],
+            'intersectBed',
             bed_file_temp
         )
-        if need_head:
-            header.append(os.path.basename(bed_file_temp)[:-ext_len].split(".",1)[-1])
+
     cmd = "cat {} {} > {}".format(
         tmp_merge_file,
         cmd,
@@ -212,7 +193,7 @@ def calc_bed_signal(bed_file: str, bw_file: str, signal_dir: str, tmp_dir: str,c
 
     os.system("cat -n " + bed_file + """ | awk -F "\t" '{if(NR>1){print $2"\t"$3"\t"$4"\t"$1}}' > """ + tmp_bed_file)
 
-    os.system(" ".join([config['software']['bigWigAverageOverBed'],bw_file, tmp_bed_file, tmp_signal_file, "> /dev/null 2>&1"]))
+    os.system(" ".join(['bigWigAverageOverBed',bw_file, tmp_bed_file, tmp_signal_file, "> /dev/null 2>&1"]))
     os.system("""cat """+tmp_signal_file+""" | sort -k1,1n | awk -F "\t" '{print $5}' > """ + res_signal_file)
 
     with open(res_signal_file) as f:
@@ -248,7 +229,7 @@ def get_cluster(se: pd.Series):
     return se
 
 # 分类
-def cluster_samples(signal_file: str, samples_pat_type: list, samples_pat: list, samples_pat_samples: dict, samples_need: list, samples_pat_last: list, bw_dir: str, result_dir: str, signal_dir: str, tmp_dir: str,config:str, force: bool = True):
+def cluster_samples(meta,signal_file: str, samples_pat_type: list, samples_pat: list, samples_pat_samples: dict, samples_need: list, samples_pat_last: list,result_dir: str, signal_dir: str, tmp_dir: str,config:str, force: bool = True):
     """ 将样本分类
     """
     res_num_file = os.path.join(result_dir, "cluster.num.{}".format(os.path.basename(signal_file)))
@@ -291,14 +272,8 @@ def cluster_samples(signal_file: str, samples_pat_type: list, samples_pat: list,
         df_peak_signal = pd.read_table(res_num_file)
 
     # bw file
-    files_bw_dict = dict()
-    for i in samples_need:
-        file_temp = os.path.join(bw_dir, "{}.bw".format(i))
-        if not os.path.exists(file_temp):
-            print("No bw file: {}, {}".format(i, bw_dir))
-            sys.exit(1)
-        files_bw_dict[i] = file_temp
-
+    sub = meta[meta['sample'].isin(samples_need)][['sample','bw']]
+    files_bw_dict = dict(zip(sub['sample'], sub['bw']))
 
     # 计算每一列的signal
     # original
@@ -713,7 +688,7 @@ def bed_to_gene(bed_dir: str, promoter_file: str, tf_file: str,config:str):
         type_temp = os.path.basename(file_single)[:-4]
         gene_file_temp = os.path.join(result_dir_gene, "{}.txt".format(type_temp))
         os.system("{} -wa -a {} -b {} | sort | uniq > {}".format(
-            config['software']['intersectBed'],
+            'intersectBed',
             promoter_file,
             file_single,
             tmp
@@ -744,30 +719,23 @@ warnings.filterwarnings("ignore", category=UserWarning)
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run ATAC sample replicate correlation")
     parser.add_argument("--file_meta",required=True, type=str, help="The meta file")
-    parser.add_argument("--bed_dir", required=True,type=str, help="Specify the bed file directory")
-    parser.add_argument("--bed_summit",default='', type=str, help="Specify the bed file summit")
-    parser.add_argument("--bw_dir", required=True,type=str, help="Specify the bw file directory")
     parser.add_argument("--remove_cluster",default='',type=str, help="Input peak file directory")
     parser.add_argument("-o",required=True,type=str, help="The output directory")
     parser.add_argument("--important_index",default=0,type=int, help="Specify the group to align, 1: the latter one in meta file, 0(default): the former one in meta file")
     parser.add_argument("--species", required=True,type=str, help="Species")
-    parser.add_argument("--config_path", type=str,help="Path to configuration file")
     return parser.parse_args()
 
 args = parse_arguments()
 file_meta=args.file_meta
-bed_file_dir=args.bed_dir
-bed_file_ext=args.bed_summit
-bw_dir=args.bw_dir
 remove_cluster=args.remove_cluster
 if remove_cluster != '':
     remove_cluster=remove_cluster.split(',')
 important_index=args.important_index
 species = args.species
-config_path = args.config_path
+config_path = os.environ.get('CDesk_config')
 result_dir = args.o
 
-with open(args.config_path, "r") as f:
+with open(config_path, "r") as f:
     config = json.load(f)
 tf_file = config['data'][species]['tf_file']
 promoter_file = config['data'][species]['promoter_file']
@@ -797,23 +765,29 @@ bed_dir_merge = os.path.join(result_dir, "beds_merge")
 if not os.path.exists(bed_dir_merge):
     os.makedirs(bed_dir_merge)
 
+meta = pd.read_csv(file_meta)
+
 # 查找对应样本的结尾文件，缺失或重复则报错
 # 获得对应文件路径
 print('1. Get sample imformation')
-bed_file_ori = get_ext_files(
-    dir_path=bed_file_dir,
-    ext=bed_file_ext,
-    samples_need=samples_need
-)
+bed_file = list(meta['peak'])
+for i in bed_file:
+    if not os.path.exists(i):
+        print(f'{i} does not exits')
+        sys.exit(1)
+assert len(bed_file) > 0, "No bed files !"
 
-assert len(bed_file_ori) > 0, "No bed files !"
-bed_file = bed_file_ori
+bw_file = list(meta['bw'])
+for i in bw_file:
+    if not os.path.exists(i):
+        print(f'{i} does not exits')
+        sys.exit(1)
+
 
 # 得到一个merge.ov.bed，记录每个样本文件在合并bed的交集次数
 print('2. Merge the samples and get the OC/CO state')
 signal_num_file_ori = bed_combine(
-    bed_file=bed_file,
-    ext_len=len(bed_file_ext),
+    meta = meta,
     result_dir=bed_dir_merge,
     tmp_dir=tmp_dir,
     force=True,
@@ -829,7 +803,7 @@ signal_file, signal_file_ori = cluster_samples(
     samples_pat_samples=samples_pat_samples,
     samples_need=samples_need,
     samples_pat_last=samples_pat_last,
-    bw_dir=bw_dir,
+    meta=meta,
     result_dir=bed_dir_merge,
     signal_dir=signal_dir,
     tmp_dir=tmp_dir,
@@ -838,7 +812,6 @@ signal_file, signal_file_ori = cluster_samples(
 )
 
 # 画图(dynamic)
-meta = pd.read_csv(file_meta)
 head_tag = meta[meta['tag_group'] == 'head']['tag_time'].values[0] if meta[meta['tag_group'] == 'head']['tag_time'].values[0] != '' else meta[meta['tag_group'] == 'head']['sample'].values[0]
 tail_tag = meta[meta['tag_group'] == 'tail']['tag_time'].values[0] if meta[meta['tag_group'] == 'head']['tag_time'].values[0] != '' else meta[meta['tag_group'] == 'tail']['sample'].values[0]
 sample_time_tags = [head_tag] + sample_time + [tail_tag]
@@ -919,4 +892,4 @@ dir_bed, dir_gene = get_genes_from_bed(
     config=config
 )
 
-print("运行完成！您可以查看结果了！")
+print("Done, you can check the results now.")

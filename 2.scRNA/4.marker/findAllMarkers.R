@@ -8,7 +8,7 @@ find_significant_markers <- function(scRNA_filt,cluster_group, logFCfilter = 0.5
       dir.create(output_dir, recursive = TRUE)  # 使用recursive = TRUE来确保创建多级目录
       message("Output directory created: ", output_dir)
     }
-
+    #Idents(scRNA_filt) = scRNA_filt@meta.data$tsne_clusters
     # 计算 marker genes
     pbmc.markers <- FindAllMarkers(object = scRNA_filt,
                                    group.by = cluster_group,
@@ -28,7 +28,7 @@ find_significant_markers <- function(scRNA_filt,cluster_group, logFCfilter = 0.5
 
 	  # 生成热图
 	  pdf(file = heatmap_file, width = plot_width, height = plot_height)
-    print(DoHeatmap(object = scRNA_filt, features = top10$gene, label = FALSE) +
+    print(DoHeatmap(object = scRNA_filt, features = top10$gene, label = FALSE,group.by = cluster_group) +
               scale_fill_gradientn(colors = c("#BEBEBE", "#F5F5F5", "#CD2626")) +
 	          theme(legend.title = element_text(size = 12), legend.text = element_text(size = 12)))
 	  while (!is.null(dev.list()))  dev.off()

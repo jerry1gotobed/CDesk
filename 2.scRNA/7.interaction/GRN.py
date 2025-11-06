@@ -313,7 +313,7 @@ class SCENICAnalyzer:
         """运行GRNBoost2步骤"""
         # 运行pyscenic grn命令
         grn_cmd = [
-            self.config['software']['pyscenic'], "grn",
+            'pyscenic', "grn",
             self.processed_file,
             self.tf_list_file,
             "-o", output_file,
@@ -385,7 +385,7 @@ class SCENICAnalyzer:
         
         # 运行pyscenic ctx命令
         ctx_cmd = [
-            self.config['software']['pyscenic'], "ctx",
+            'pyscenic', "ctx",
             grn_output,
             *db_files,
             "--annotations_fname", motif_annotations_fname,
@@ -405,7 +405,7 @@ class SCENICAnalyzer:
         """运行aucell步骤"""
         # 运行pyscenic aucell命令
         aucell_cmd = [
-            self.config['software']['pyscenic'], "aucell",
+            'pyscenic', "aucell",
             self.processed_file,
             motif_output,
             "-o", output_file,
@@ -682,46 +682,65 @@ class SCENICAnalyzer:
         
             # 创建网络
             G = nx.DiGraph()
-        
+
             # 添加边
             for _, row in edges_df.iterrows():
                 G.add_edge(row['TF'], row['target'], weight=row['importance'])
-        
+
             # 计算节点大小 (转录因子节点更大)
             tfs = set(edges_df['TF'])
             node_sizes = [1000 if node in tfs else 300 for node in G.nodes()]
-        
+
             # 绘制网络
-            plt.figure(figsize=(12, 12))
-        
-            # 使用不同布局算法
-            if len(G.nodes()) < 10:
-                pos = nx.spring_layout(G, seed=42)
-            else:
-                pos = nx.kamada_kawai_layout(G)
-                
-            # 绘制节点
+            plt.figure(figsize=(14, 10))
+
+            # 改进的布局选择策略
+            node_count = len(G.nodes())
+
+            tf_nodes = [node for node in G.nodes() if node in tfs]
+            target_nodes = [node for node in G.nodes() if node not in tfs]
+            pos = nx.bipartite_layout(G, tf_nodes, align='vertical') 
+
+            # 绘制节点 - 改进颜色和透明度
             nx.draw_networkx_nodes(G, pos, 
-                                  node_size=node_sizes, 
-                                  node_color=['red' if node in tfs else 'lightblue' for node in G.nodes()],
-                                  alpha=0.8)
-        
-            # 绘制边 - 使用细线
-            edge_weights = [G[u][v]['weight']*0.2 for u, v in G.edges()]
-            nx.draw_networkx_edges(G, pos, width=edge_weights, alpha=0.5, 
-                                 arrowsize=10, connectionstyle='arc3,rad=0.1',
-                                 edge_color='gray')
-        
-            # 绘制标签
-            nx.draw_networkx_labels(G, pos, font_size=10, font_family='sans-serif')
+                                node_size=node_sizes, 
+                                node_color=['#FF6B6B' if node in tfs else '#4ECDC4' for node in G.nodes()],
+                                alpha=0.9,
+                                edgecolors='black',
+                                linewidths=1)
+
+            # 绘制边 - 改进样式
+            edge_weights = [G[u][v]['weight'] * 0.02 for u, v in G.edges()]  # 调整权重系数
+            nx.draw_networkx_edges(G, pos, 
+                                width=edge_weights, 
+                                alpha=0.7, 
+                                arrowsize=10, 
+                                arrowstyle='->',
+                                connectionstyle='arc3,rad=0.1',
+                                edge_color='#555555')
+
+            # 绘制标签 - 改进样式
+            nx.draw_networkx_labels(G, pos, 
+                                font_size=9, 
+                                font_family='sans-serif',
+                                font_weight='bold')
+
+            # 添加图例（可选）
+            from matplotlib.patches import Patch
+            legend_elements = [
+                Patch(facecolor='#FF6B6B', alpha=0.9, label='Transcription Factors'),
+                Patch(facecolor='#4ECDC4', alpha=0.9, label='Targets')
+            ]
+            plt.legend(handles=legend_elements, loc='upper right')
         
             # 设置标题
             if tf:
-                plt.title(f"Gene Regulatory Network for {tf} (top {top_n} targets)")
+                plt.title(f"Gene Regulatory Network for {tf} (top {top_n} targets)",fontsize=14, fontweight='bold', pad=20)
             else:
-                plt.title(f"Gene Regulatory Network (top {top_n} interactions)")
+                plt.title(f"Gene Regulatory Network (top {top_n} interactions)",fontsize=14, fontweight='bold', pad=20)
         
             plt.axis('off')
+            plt.tight_layout()
         
             # 保存图像
             if tf:
@@ -745,7 +764,6 @@ def main():
     parser.add_argument("--tf-list", default=None, help="转录因子列表文件")
     parser.add_argument("--db-folder", required=True, help="RcisTarget数据库文件夹")
     parser.add_argument("--species", default="hg19", help="分析物种，如hg19(人类)或mm10(小鼠)")
-    parser.add_argument("--config",required=True, type=str, help="The config file") 
     # SCENIC参数
     parser.add_argument("--num-workers", type=int, default=None, help="并行计算的工作进程数")
     parser.add_argument("--auc-threshold", type=float, default=0.05, help="AUCell阈值")
@@ -781,7 +799,7 @@ def main():
         normalize = bool(args.normalize),
         log = bool(args.log),
         scale = bool(args.scale),
-        config = args.config
+        config = os.environ.get('CDesk_config')
     )
     
     # 加载数据
@@ -831,3 +849,4 @@ def main():
 
 if __name__ == "__main__":
     main() 
+

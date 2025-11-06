@@ -27,6 +27,8 @@ mt_percent <- ifelse(length(sys_argv) >= 8, as.numeric(sys_argv[8]), 5)  # Defau
 variable_features <- ifelse(length(sys_argv) >= 9, as.numeric(sys_argv[9]), 2000)  # Default: 2000
 dim_prefer <- ifelse(length(sys_argv) >= 10, as.numeric(sys_argv[10]), 30)  # Default: 30
 res <- ifelse(length(sys_argv) >= 11, as.numeric(sys_argv[11]), 1)  # Default: 1
+width = ifelse(length(sys_argv) >= 12, as.numeric(sys_argv[12]), 10)  # Default: 10
+height = ifelse(length(sys_argv) >= 13, as.numeric(sys_argv[13]), 8)  # Default: 8
 
 # Ensure required directories exist
 if (!dir.exists(output_directory)) {
@@ -57,7 +59,7 @@ if (grepl("\\.h5$", input_seurat)) {
 
 cat("Input Seurat file: ", input_seurat, "\n")
 cat("Output directory: ", output_directory, "\n")
-pdf(paste0(output_directory,"/",sample_name,"_Seurat_clustering.pdf"),width=10,height=10)
+pdf(paste0(output_directory,"/",sample_name,"_Seurat_clustering.pdf"),width=width,height=height)
 
 # Create Seurat object
 cat("Creating Seurat object...\n")
@@ -102,7 +104,7 @@ seu_obj <- RunPCA(seu_obj, features = VariableFeatures(object = seu_obj))
 
 # Elbow plot to determine the number of dimensions to use
 cat("Generating Elbow plot...\n")
-ElbowPlot(seu_obj)
+ElbowPlot(seu_obj,ndims = 50)
 
 # Find optimal number of dimensions for clustering
 cat("Use", dim_prefer, "dimensions for clustering.\n")
