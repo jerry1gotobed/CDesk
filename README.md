@@ -6,7 +6,7 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 ![](./doc/images/CDesk.png)
 </div>
 
-## [0. Installation ](./doc/markdown/CDesk.html)
+## [0. Installation ](./doc/CDesk.html)
 1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
@@ -145,50 +145,83 @@ An example configuration is provided below. You can customize it to support addi
 </pre>
 </details>
 
-## [1. BulkRNA ](./doc/markdown/BulkRNA.html)
+## [1. BulkRNA ](./doc/BulkRNA.html)
 1.1 bulkRNA: Preprocess
+
 1.2 bulkRNA: Correlation
+
 1.3 bulkRNA: DEG
+
 1.4 bulkRNA: Enrich
+
 1.5 bulkRNA: Similarity
+
 1.6 bulkRNA: Clustering
+
 1.7 bulkRNA: Splice
 
-## [2. scRNA ](./doc/markdown/scRNA.html)
+## [2. scRNA ](./doc/scRNA.html)
 2.1 scRNA: Preprocess
+
 2.2 scRNA: Cluster
+
 2.3 scRNA: Annotation
+
 2.4 scRNA: Marker
+
 2.5 scRNA: Trajectory
+
 2.6 scRNA: Similarity
+
 2.7 scRNA: Interaction
+
 2.8 scRNA: Integrate
 
-## [3. ATAC ](./doc/markdown/ATAC.html)
+## [3. ATAC ](./doc/ATAC.html)
 3.1 ATAC: Preprocess
+
 3.2 ATAC: QC
+
 3.3 ATAC: Dynamic
+
 3.4 ATAC: Motif
+
 3.5 ATAC: Accessbility
+
 3.6 ATAC: IGV
+
 3.7 ATAC: Correlation
 
-## [4. ChIPseq&CUTTag ](./doc/markdown/ChIPseq&CUTTag.html)
+## [4. ChIPseq&CUTTag ](./doc/ChIPseq&CUTTag.html)
 4.1 ATAC: Preprocess
+
 4.2 ATAC: QC
+
 4.3 ATAC: Pattern
+
 4.4 ATAC: Motif
+
 4.5 ATAC: Accessbility
+
 4.6 ATAC: IGV
+
 4.7 ATAC: Correlation
 
-## [5. HiC ](./doc/markdown/HiC.html)
+## [5. HiC ](./doc/HiC.html)
 5.1 HiC: Preprocess
+
 5.2 HiC: Sample Correlation
+
 5.3 HiC: Matrix balancing and Format transformation
+
 5.4 HiC: TAD
+
 5.5 HiC: Compartment
+
 5.6 HiC: Loop
+
 5.7 HiC: 3D reconstruction
+
 5.8 HiC: Distance-contact
+
 5.9 HiC: Contact compare
