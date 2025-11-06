@@ -21,12 +21,12 @@ The pipeline first checks whether a BAM file corresponding to each FASTQ sequenc
 Here is an example about how to use the CDesk HiC preprocess module. 
 ```shell
 CDesk bulkRNA preprocess \
--i /.../input_directory -o /.../output_directory \
+-i /.../input.csv -o /.../output_directory \
 -s mm10 -t 50 -l 2 -bw -te 
 ```
 |Parameters^(*necessary)^|Description|Default value|
 |----|----|----|
-|-i,--input*|The input directory|
+|-i,--input*|The input fq information file|
 |-o,--output*|The output directory|
 |-s,--species*|The species specified|
 |-t,--thread|The number of threads to use|8
@@ -109,6 +109,25 @@ Number 2 sample: /mnt/linzejie/temp/Bam/GSM7789777.bam
 --------------------------Merge scTE result-------------------------------
 --------------------------scTE done--------------------------
 </blockcode></pre>
+</details>
+
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre>
+<blockcode>
+sample,fq1,fq2,bam,ports
+GSM7789776,,,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789776.bam,2
+GSM7789777,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789776_1.fastq.gz,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789777_2.fastq.gz,,2
+</blockcode>
+5 columns:
+- sample: Sample name
+- fq1: Read 1 file (_1.fastq) from paired-end sequencing
+- fq2: Read 2 file (_1.fastq)" from paired-end sequencing
+- bam: Corresponding bam files (optional)
+- ports: Number of ports (1/2)
+For single-end data, the first FASTQ file will be used; if BAM files are provided, the alignment step will be skipped to accelerate the workflow.
+</pre>
 </details>
 
 ## 1.2 bulkRNA: Correlation

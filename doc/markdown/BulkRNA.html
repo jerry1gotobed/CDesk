@@ -3,7 +3,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.20\crossnote\dependencies\katex\katex.min.css">
       
       
       
@@ -71,7 +71,7 @@
 <center><i>CDesk bulkRNA preprocess pipeline</i></center><br>
 <p>Here is an example about how to use the CDesk HiC preprocess module.</p>
 <pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk bulkRNA preprocess <span class="token punctuation">\</span>
-<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input_directory <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
 <span class="token parameter variable">-s</span> mm10 <span class="token parameter variable">-t</span> <span class="token number">50</span> <span class="token parameter variable">-l</span> <span class="token number">2</span> <span class="token parameter variable">-bw</span> <span class="token parameter variable">-te</span> 
 </code></pre><table>
 <thead>
@@ -84,7 +84,7 @@
 <tbody>
 <tr>
 <td>-i,--input*</td>
-<td>The input directory</td>
+<td>The input fq information file</td>
 <td></td>
 </tr>
 <tr>
@@ -195,6 +195,23 @@ Number 2 sample: /mnt/linzejie/temp/Bam/GSM7789777.bam
 --------------------------scTE done--------------------------
 </blockcode></pre>
 </details>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+sample,fq1,fq2,bam,ports
+GSM7789776,,,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789776.bam,2
+GSM7789777,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789776_1.fastq.gz,/mnt/linzejie/CDesk_test/data/1.RNA/1.preprocess/bam_fq/GSM7789777_2.fastq.gz,,2
+</blockcode>
+5 columns:
+- sample: Sample name
+- fq1: Read 1 file (_1.fastq) from paired-end sequencing
+- fq2: Read 2 file (_1.fastq)" from paired-end sequencing
+- bam: Corresponding bam files (optional)
+- ports: Number of ports (1/2)
+For single-end data, the first FASTQ file will be used; if BAM files are provided, the alignment step will be skipped to accelerate the workflow.
+</pre>
+</details>
 <h2 id="12-bulkrna-correlation">1.2 bulkRNA: Correlation </h2>
 <p>The CDesk bulkRNA correlation module performs correlation analysis on RNA-seq data across different samples to visualize sample relationships. By calculating and displaying sample similarities, it enables researchers to assess overall data structure. Users can optionally apply  removeBatchEffect or ComBat batch effect correction methods to adjust for technical variations. Subsequently, Principal Component Analysis (PCA) plots, Multidimensional Scaling (MDS) plot and correlation heatmaps are generated to help researchers interpret sample distribution and underlying patterns in the data.</p>
 <p>Here is an example about how to use the CDesk bulkRNA correlation module.</p>
@@ -300,8 +317,7 @@ CDesk bulkRNA DEG adjusted_t <span class="token punctuation">\</span>
 
 <span class="token comment"># gfold</span>
 CDesk bulkRNA DEG gfold <span class="token punctuation">\</span>
-<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./bam_files <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
-<span class="token parameter variable">--group</span> /<span class="token punctuation">..</span>./grouping_file.csv <span class="token parameter variable">--readcnt</span> /<span class="token punctuation">..</span>./readcnt_files <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./grouping_file.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
 <span class="token parameter variable">-t</span> <span class="token number">50</span> <span class="token parameter variable">-s</span> species <span class="token parameter variable">-p</span> <span class="token parameter variable">--gene</span> /<span class="token punctuation">..</span>./genes.txt
 
 </code></pre><table>
@@ -375,17 +391,12 @@ CDesk bulkRNA DEG gfold <span class="token punctuation">\</span>
 </tr>
 <tr>
 <td>-i,--input*</td>
-<td>Input bam files directory</td>
+<td>Input bam information file</td>
 <td></td>
 </tr>
 <tr>
 <td>-o,--output*</td>
 <td>Output directory</td>
-<td></td>
-</tr>
-<tr>
-<td>--group*</td>
-<td>The grouping file</td>
 <td></td>
 </tr>
 <tr>
@@ -412,11 +423,6 @@ CDesk bulkRNA DEG gfold <span class="token punctuation">\</span>
 <td>--gfold</td>
 <td>gfold threshold of DEGs</td>
 <td>1</td>
-</tr>
-<tr>
-<td>--readcnt</td>
-<td>Provide the readcnt file directory to skip bam-&gt;readcnt step</td>
-<td></td>
 </tr>
 <tr>
 <td>-t,--thread</td>
@@ -494,9 +500,24 @@ GSM7789782,8C,0,-1
 GSM7789783,8C,0,-1
 GSM7789784,8C,0,-1
 </blockcode>
-4 columns:
+columns:
 - sample: The same samples in the expression matrix file columns
 - group: Set the group for heatmap
+- other columns: Do 1 vs -1(control) DEG analysis, column name set as output prefix
+</pre>
+</details>
+<details>
+<summary>
+What should the gfold grouping file look like?</summary>
+<pre><blockcode>
+sample,group,bam,readcnt,2C_vs_4C
+GSM7789776,2C,/mnt/linzejie/CDesk_test/result/1.RNA/1.preprocess/test/Bam/GSM7789776.bam,/mnt/linzejie/CDesk_test/result/1.RNA/1.preprocess/test/Expression/GSM7789776.read_cnt,1
+GSM7789777,4C,/mnt/linzejie/CDesk_test/result/1.RNA/1.preprocess/test/Bam/GSM7789777.bam,/mnt/linzejie/CDesk_test/result/1.RNA/1.preprocess/test/Expression/GSM7789777.read_cnt,-1
+</blockcode>
+columns:
+- sample: Set the sample name
+- group: Set the group for heatmap
+- readcnt(optional): Provide the readcnt files to skip the bam-&gt;readcnt step
 - other columns: Do 1 vs -1(control) DEG analysis, column name set as output prefix
 </pre>
 </details>

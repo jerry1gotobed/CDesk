@@ -3,7 +3,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
-      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.19\crossnote\dependencies\katex\katex.min.css">
+      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.20\crossnote\dependencies\katex\katex.min.css">
       
       
       
@@ -25,7 +25,7 @@
       <div class="crossnote markdown-preview  ">
       
 <h1 id="cdesk-3-atac-pipeline">CDesk: 3. ATAC pipeline </h1>
-<p>Our CDesk ATAC module comprises of 7 function submodules. Here we present you the CDesk bulkRNA working pipeline and how to use it to analyze your bulkRNA data.<br>
+<p>Our CDesk ATAC module comprises of 7 function submodules. Here we present you the CDesk ATAC working pipeline and how to use it to analyze your ATAC data.<br>
 
 </p><div class="md-toc">
 <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
@@ -38,11 +38,23 @@
 
           </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
           <a href="#33-atac-dynamic" class="md-toc-link">
-            <p>3.3 ATAC: dynamic</p>
+            <p>3.3 ATAC: Dynamic</p>
 
           </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
           <a href="#34-atac-motif" class="md-toc-link">
-            <p>3.4 ATAC: motif</p>
+            <p>3.4 ATAC: Motif</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#35-atac-accessbility" class="md-toc-link">
+            <p>3.5 ATAC: Accessbility</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#36-atac-igv" class="md-toc-link">
+            <p>3.6 ATAC: IGV</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#37-atac-correlation" class="md-toc-link">
+            <p>3.7 ATAC: Correlation</p>
 
           </a></div>
 </div>
@@ -319,7 +331,7 @@ ESC,ESC_r3,/mnt/linzejie/CDesk_test/data/3.ATAC/2.QC/bw/ESC_r3.bw,/mnt/linzejie/
 - peak(optional): The peak files to merge if peak parameter assigned
 </pre>
 </details>
-<h2 id="33-atac-dynamic">3.3 ATAC: dynamic </h2>
+<h2 id="33-atac-dynamic">3.3 ATAC: Dynamic </h2>
 <p>The CDesk ATAC dynamic module analyzes the dynamic changes in chromatin accessibility between two ATAC-seq datasets, identifying differentially accessible genomic regions and their associated genes over time. It calculates the signal intensity within these regions and generates heatmaps to visualize the temporal changes in chromatin accessibility.</p>
 <p>The pipeline first retrieves sample information from the metadata file and validates the input files before merging peak regions across all samples. The merged regions are then classified into dynamic patterns, including CO (closed-to-open) and OC (open-to-closed), to identify chromatin state transitions. Signal intensities for each region across samples are calculated and normalized. Heatmaps are generated to visualize these dynamic patterns, both within individual groups and in aligned multi-group comparisons. Finally, the classified regions are annotated with associated genes and subjected to transcription factor analysis, producing comprehensive outputs including region statistics and gene associations.</p>
 <p>Here is an example about how to use the CDesk ATAC dynamic module.</p>
@@ -426,7 +438,7 @@ The temporal order from top to bottom, should be consistent between the two grou
 Done, you can check the results now.
 </blockcode></pre>
 </details>
-<h2 id="34-atac-motif">3.4 ATAC: motif </h2>
+<h2 id="34-atac-motif">3.4 ATAC: Motif </h2>
 <p>CDesk motif module includes four functions for transcription factor motif enrichment analysis:</p>
 <ol>
 <li>HOMER motif discovery – Performs motif analysis on peak regions or gene sequences using the HOMER tool.</li>
@@ -437,7 +449,7 @@ Done, you can check the results now.
 <span class="token parameter variable">-s</span> mm10 <span class="token parameter variable">--mode</span> peak
 
 CDesk ATAC motif homer <span class="token punctuation">\</span>
-<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./gene.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./gene.txt <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
 <span class="token parameter variable">-s</span> mouse <span class="token parameter variable">--mode</span> gene
 </code></pre><table>
 <thead>
@@ -485,24 +497,16 @@ CDesk ATAC motif homer <span class="token punctuation">\</span>
 </tr>
 </tbody>
 </table>
-<p>If the pipeline runs successfully, there would be 6 folders and a summary file of cluster and gene in the output directory.</p>
-<ul>
-<li>beds_merge: Stores the merged peak and signal files.</li>
-<li>cluster: Stores the bed files of different open and closed stage (e.g., OC1 indicates that a region is open at the first time point and closed at all subsequent time points.).</li>
-<li>cluster_genes: The corresponding genes and tf files.</li>
-<li>img: Stores the visualization images.</li>
-<li>signal: Stores signal strength of merged regions.</li>
-<li>cluster_gene_summary.txt: The summary file of cluster and gene.</li>
-</ul>
+<p>If the pipeline runs successfully, there would be findMotifsGenome,  annotatePeaks homer results and log files in the output directory for the peak mode. There would be findMotifs homer results and log files in the output directory for the gene mode.</p>
 <div align="center">
-<img src="./images/ATAC_dynamic_1.png" width="200">
+<img src="./images/ATAC_motif_homer_gene_result.png" width="200"><img src="./images/ATAC_motif_homer_peak_result.png" width="200">
 </div>
-<center><i>CDesk ATAC dynamic example result</i></center>
+<center><i>CDesk ATAC motif homer example result (left: gene mode, right: peak mode)</i></center>
 <details>
 <summary>
 What should the input file look like?</summary>
 <pre><blockcode>
-=== peak.csv ===
+=== macs_result_peak.csv ===
 peak,sample
 /mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_homer/GSM7789740_e3_peaks.bed,GSM7789740_e3
 /mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_homer/GSM7789740_e5_peaks.bed,GSM7789740_e5
@@ -518,16 +522,533 @@ gene,sample
 </details>
 <br>
 <ol start="2">
-<li>
-<p>MEME motif analysis – Identifies motifs in FASTA sequences using MEME-ChIP.</p>
-</li>
-<li>
-<p>HOMER motif discovery result integration and heatmap visualization – Integrates HOMER results to generate TF enrichment heatmaps with significance annotations.</p>
-</li>
-<li>
-<p>Genomic region enrichment analysis – Conducts statistical enrichment testing and visualization of genomic regions associated with motifs.</p>
-</li>
+<li>MEME motif analysis – Identifies motifs in FASTA sequences using MEME-ChIP.</li>
 </ol>
+<p>Here is an example about how to use the CDesk ATAC motif meme module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC motif meme <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-db</span> /<span class="token punctuation">..</span>./db.txt
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input fasta information file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-db,--database*</td>
+<td>Database file</td>
+<td></td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>The number of threads to use</td>
+<td>10</td>
+</tr>
+<tr>
+<td>--nmotifs</td>
+<td>Number of motifs to extract</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would be meme results and log files in the output directory.</p>
+<div align="center">
+<img src="./images/ATAC_motif_meme.png">
+</div>
+<center><i>CDesk ATAC motif meme example result</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+=== input.csv ===
+fasta,sample
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_meme/GSM7789740_e3_peaks.fa,GSM7789740_e3
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_meme/GSM7789740_e5_peaks.fa,GSM7789740_e5
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/Find_meme/GSM7789740_e7_peaks.fa,GSM7789740_e7
+</blockcode>
+- fasta: The fasta files
+- sample: The sample name
+<blockcode>
+=== db.txt ===
+/mnt/kongtianci/CDesk/ACATseq/meme_ref/motif_databases/JASPAR/JASPAR2022_CORE_vertebrates_non-redundant.meme
+/mnt/kongtianci/CDesk/ACATseq/meme_ref/motif_databases/MOUSE/HOCOMOCOv11_full_MOUSE_mono_meme_format.meme 
+</blockcode>
+</pre>
+</details>
+<br>
+<ol start="3">
+<li>HOMER motif discovery result integration and heatmap visualization – Integrates HOMER results to generate TF enrichment heatmaps with significance annotations.</li>
+</ol>
+<p>Here is an example about how to use the CDesk ATAC motif homer_heatmap module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC motif homer_heatmap <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">--motif</span> /<span class="token punctuation">..</span>./motifs.txt
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The homer results information csv file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>--motif</td>
+<td>The specified motifs txt file</td>
+<td>no</td>
+</tr>
+<tr>
+<td>--width</td>
+<td>The plot width</td>
+<td>10</td>
+</tr>
+<tr>
+<td>--height</td>
+<td>The plot height</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would a heatmap plot in the output directory. If no motifs specified, it would plot the top 20 significant motifs. (*: q &lt; 0.05, **: q &lt; 0.01, ***: q &lt; 0.001)</p>
+<div align="center">
+<img src="./images/ATAC_motif_homer_heatmap.png" height="400">
+</div>
+<center><i>CDesk ATAC motif homer_heatmap example result</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+=== input.csv ===
+dir,sample,cluster
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/homer_heatmap/homer_results_test/GSM7789741_e3_peaks_motifDir,GSM7789741,e3
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/homer_heatmap/homer_results_test/GSM7789740_e5_peaks_motifDir,GSM7789740,e5
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/homer_heatmap/homer_results_test/GSM7789740_e3_peaks_motifDir,GSM7789740,e3
+/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/homer_heatmap/homer_results_test/GSM7789740_e7_peaks_motifDir,GSM7789740,e7
+</blockcode>
+- dir: homer result directory
+- sample: The sample name
+<blockcode>
+=== motifs.txt ===
+p53
+p63
+NFY
+</blockcode>
+</pre>
+</details>
+<br>
+<ol start="4">
+<li>Genomic region enrichment analysis – Conducts statistical enrichment testing and visualization of genomic regions associated with motifs.</li>
+</ol>
+<p>Here is an example about how to use the CDesk ATAC enrich_heatmap module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC motif enrich_heatmap <span class="token punctuation">\</span>
+<span class="token parameter variable">--motif</span> /<span class="token punctuation">..</span>./motifs.csv <span class="token parameter variable">--bed</span> /<span class="token punctuation">..</span>./input.csv<span class="token punctuation">\</span>
+<span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token parameter variable">-t</span> <span class="token number">50</span> <span class="token parameter variable">-s</span> mm10
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--motif_bed*</td>
+<td>The homer results information csv file</td>
+<td></td>
+</tr>
+<tr>
+<td>--bed*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species</td>
+<td>The specified species</td>
+<td></td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>The number of threads</td>
+<td>12</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would a base directory that saves the input bed files, a MotifAll directory that saves the motif bed files with the statistical enrichment testing result comparing the input and motifs, a summary result file of statistical enrichment testing and the visualization dot plot.</p>
+<div align="center">
+<img src="./images/ATAC_motif_enrich.png" width="300">
+</div>
+<div align="center">
+<img src="./images/ATAC_motif_enrichOC.png" width="300"><img src="./images/ATAC_motif_enrichOC.png" width="300">
+</div>
+<center><i>CDesk ATAC motif enrich_heatmap example plot result</i></center>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+== bed.csv ==
+tag,bed,group
+OC9,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC9.bed,OC
+OC8,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC8.bed,OC
+OC7,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC7.bed,OC
+OC6,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC6.bed,OC
+OC5,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC5.bed,OC
+OC4,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC4.bed,OC
+OC3,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC3.bed,OC
+OC2,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC2.bed,OC
+OC1,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_OC1.bed,OC
+CO9,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO9.bed,CO
+CO8,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO8.bed,CO
+CO7,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO7.bed,CO
+CO6,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO6.bed,CO
+CO5,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO5.bed,CO
+CO4,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO4.bed,CO
+CO3,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO3.bed,CO
+CO2,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO2.bed,CO
+CO1,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/bed/Oct4NanogN70_CO1.bed,CO
+</blockcode>
+- tag: The tag to plot
+- bed: The input bed files
+- group: The group to separate plots
+<blockcode>
+== motif.csv ==
+motif,bed
+Bach1,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Bach1.bed
+Bach2,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Bach2.bed
+Sox2,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Sox2.bed
+Nanog,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Nanog.bed
+Oct4,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Oct4.bed
+Fra2,/mnt/linzejie/CDesk_test/data/3.ATAC/4.motif/enrich_heatmap/motif/Fra2.bed
+</blockcode>
+- motif: The motifs tag to plot
+- bed: The input motif bed files
+</pre>
+</details>
+<br>
+<h2 id="35-atac-accessbility">3.5 ATAC: Accessbility </h2>
+<p>The CDesk ATAC accessbility module is designed to extract signal values from BigWig files and generate average signal profile plots and boxplots. The script supports two analysis modes: region mode and gene mode. In gene mode, species information is required to retrieve gene annotations (GTF file), and the promoter region size can be user-defined. The script computes signal intensity based on user-specified alignment anchors (e.g., TSS, TTS, or peak center), generates average signal profiles, and calculates mean signal values for each region in each sample. Finally, boxplots are generated according to the user’s choice of grouping method—either by sample or by region list—enabling flexible visualization of chromatin accessibility patterns.</p>
+<p>Here is an example about how to use the CDesk ATAC accessbility module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC accessbility <span class="token punctuation">\</span>
+<span class="token parameter variable">--bw</span> /<span class="token punctuation">..</span>./bw.txt <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./gene_list.txt <span class="token punctuation">\</span>
+<span class="token parameter variable">--mode</span> gene <span class="token parameter variable">--species</span> mm10 <span class="token parameter variable">--center</span> whole<span class="token punctuation">(</span>TSS/TTS<span class="token punctuation">)</span> <span class="token punctuation">\</span>
+<span class="token punctuation">(</span>--method region_list <span class="token parameter variable">--region_list</span> /<span class="token punctuation">..</span>./region_list.txt<span class="token punctuation">)</span>
+
+CDesk ATAC accessbility <span class="token punctuation">\</span>
+<span class="token parameter variable">--bw</span> /<span class="token punctuation">..</span>./bw.txt <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./regions.bed <span class="token punctuation">\</span>
+<span class="token parameter variable">--mode</span> region <span class="token parameter variable">--center</span> position<span class="token punctuation">(</span>peak<span class="token punctuation">)</span> <span class="token punctuation">\</span>
+<span class="token punctuation">(</span>--method region_list <span class="token parameter variable">--region_list</span> /<span class="token punctuation">..</span>./region_list.txt<span class="token punctuation">)</span>
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--bw*</td>
+<td>The input bw txt file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>--mode*</td>
+<td>Analysis mode: region/gene</td>
+<td></td>
+</tr>
+<tr>
+<td>-i,--input*</td>
+<td>The Input gene region or gene list txt file</td>
+<td></td>
+</tr>
+<tr>
+<td>-s,--species</td>
+<td>The species specified (necessarry in gene mode)</td>
+<td></td>
+</tr>
+<tr>
+<td>--center*</td>
+<td>Average profile alignment：region mode:peak/position，gene mode:TSS/TTS/whole</td>
+<td></td>
+</tr>
+<tr>
+<td>--method</td>
+<td>Boxplot plotting method：sample/region_list</td>
+<td>sample</td>
+</tr>
+<tr>
+<td>--promoter_size</td>
+<td>Gene promoter region size, default: TSS upstream and downstream 5kb</td>
+<td>5000</td>
+</tr>
+<tr>
+<td>--region_list</td>
+<td>Region list file for box plot</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would a box plot, a summary file of signals on different regions, a directory that saves the profile plot and signal matrix.</p>
+<div align="center">
+<img src="./images/ATAC_accessbility_result.png">
+</div>
+<center><i>CDesk ATAC accessbility example result</i></center>
+<div align="center">
+<img src="./images/ATAC_accessbility_gene_whole.png" width="330"><img src="./images/ATAC_accessbility_gene_TTS.png" width="330"><img src="./images/ATAC_accessbility_gene_TSS.png" width="330">
+</div>
+<center><i>CDesk ATAC accessbility gene mode example profile result (whole/TTS/TSS)</i></center>
+<div align="center">
+<img src="./images/ATAC_accessbility_region_position.png" width="330"><img src="./images/ATAC_accessbility_region_peak.png" width="330">
+</div>
+<center><i>CDesk ATAC accessbility region mode example profile result (position/peak)</i></center>
+<div align="center">
+<img src="./images/ATAC_accessbility_box_sample.png" width="330"><img src="./images/ATAC_accessbility_box_list.png" width="330">
+</div>
+<center><i>CDesk ATAC accessbility box plot example 
+result (sample/region_list)</i></center>
+<br>
+In gene mode, the profile output plot supports centering options: TSS, TTS and whole.
+<p>For TSS and TTS, the plot displays the region spanning ±5 kbp around the TSS, TTS, respectively.<br>
+For the whole center, the plot includes the entire gene body plus 5 kbp upstream and downstream. Since gene body lengths vary, the gene body region is scaled to a uniform length during visualization to ensure alignment across genes.</p>
+<p>Two methods are available for generating the boxplot:<br>
+sample: computes the average signal across all genes or regions for each sample, and plots one box per sample;<br>
+region_list: groups regions based on a user-provided --region_list file and calculates average signal values for each group, generating a boxplot where each box represents a defined region set.</p>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+== bw.txt ==
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789744.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789758.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789757.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789756.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789755.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789754.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789753.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789752.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789751.bw
+/mnt/linzejie/CDesk_test/data/3.ATAC/5.accessbility/GSM7789750.bw
+== gene_list.txt ==
+Sox2
+Mprip
+Oc90
+== region_list.txt ==(each line a group)
+chr1:3510000-3520000 chr2:16590000-16600000
+chr11:18590000-18600000 chr18:5060000-5070000
+== region_list.txt ==(each line a group)
+Sox2 Oc90
+Mprip
+</blockcode>
+</pre>
+</details>
+<br>
+<h2 id="36-atac-igv">3.6 ATAC: IGV </h2>
+<p>The CDesk ATAC igv module is designed to automate the generation of genome browser screenshots using IGV (Integrative Genomics Viewer). It parses a list of input files and specified genomic regions to generate an IGV batch script. The script then runs IGV in a virtual display environment, enabling headless operation, and automatically captures screenshots of the specified genomic regions in bulk.</p>
+<p>Here is an example about how to use the CDesk ATAC igv module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC igv <span class="token punctuation">\</span>
+<span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.txt <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token punctuation">\</span>
+<span class="token parameter variable">--region</span> /<span class="token punctuation">..</span>./regions.txt <span class="token parameter variable">--genome</span> hg19
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-i,--input*</td>
+<td>The input list file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>--genome*</td>
+<td>The genome specified</td>
+<td></td>
+</tr>
+<tr>
+<td>--region*</td>
+<td>Region list file</td>
+<td></td>
+</tr>
+<tr>
+<td>--display_mode</td>
+<td>Display mode：collapse/expand/squish</td>
+<td>collapse</td>
+</tr>
+<tr>
+<td>--type</td>
+<td>Output plot format: svg/png</td>
+<td>png</td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would an IGV batch script and IGV snapshots in the output directory.</p>
+<div align="center">
+<img src="./images/ATAC_igv.png" height="350">
+</div>
+<center><i>CDesk ATAC igv example snapshot result</i></center>
+<details>
+  <summary>A successful CDesk ATAC preprocess running process</summary>
+  <pre><blockcode>
+Using system JDK. IGV requires Java 21.
+openjdk version "21.0.6" 2025-01-21
+OpenJDK Runtime Environment JBR-21.0.6+9-895.97-nomod (build 21.0.6+9-b895.97)
+OpenJDK 64-Bit Server VM JBR-21.0.6+9-895.97-nomod (build 21.0.6+9-b895.97, mixed mode, sharing)
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: package com.sun.java.swing.plaf.windows not in java.desktop
+WARNING: package sun.awt.windows not in java.desktop
+WARNING: Unknown module: jide.common specified to --add-exports
+WARNING: Unknown module: jide.common specified to --add-exports
+INFO [Oct 24,2025 10:59] [Main] Startup  IGV Version user not_set
+INFO [Oct 24,2025 10:59] [Main] Java 21.0.6 (build 21.0.6+9-b895.97) 2025-01-21
+INFO [Oct 24,2025 10:59] [Main] Java Vendor: JetBrains s.r.o. https://openjdk.org/
+INFO [Oct 24,2025 10:59] [Main] JVM: OpenJDK 64-Bit Server VM JBR-21.0.6+9-895.97-nomod   
+INFO [Oct 24,2025 10:59] [Main] OS: Linux 5.15.0-139-generic amd64
+INFO [Oct 24,2025 10:59] [Main] IGV Directory: /mnt/linzejie/igv
+INFO [Oct 24,2025 10:59] [OAuthUtils] Loading Google oAuth properties
+INFO [Oct 24,2025 10:59] [CommandListener] Listening on port 60151
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+INFO [Oct 24,2025 10:59] [BatchRunner] Executing batch script: /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/igv_batch_script.txt
+INFO [Oct 24,2025 10:59] [GenomeManager] Loading genome: https://raw.githubusercontent.com/igvteam/igv-genomes/refs/heads/main/json/hg38.json
+SEVERE [Oct 24,2025 11:00] [ReferenceFrame] Null chromosome: 
+INFO [Oct 24,2025 11:00] [TrackLoader] Loading resource:  https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeqSelect.txt.gz
+INFO [Oct 24,2025 11:01] [TrackLoader] Loading resource:  https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeqSelect.txt.gz
+INFO [Oct 24,2025 11:03] [GenomeManager] Loading genome: https://raw.githubusercontent.com/igvteam/igv-data/refs/heads/main/genomes/legacy/json/hg19.json
+INFO [Oct 24,2025 11:03] [TrackLoader] Loading resource:  https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/ncbiRefSeq.txt.gz
+INFO [Oct 24,2025 11:05] [TrackLoader] Loading resource:  /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+WARNING: BAM index file /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam.bai is older than BAM /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+WARNING: BAM index file /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam.bai is older than BAM /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+WARNING: BAM index file /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam.bai is older than BAM /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+INFO [Oct 24,2025 11:05] [TrackLoader] Loading resource:  /mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments2.bam
+Snapshot generation completed successfully.
+</blockcode></pre>
+</details>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+== input.txt ==
+/mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+/mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments2.bam 
+</blockcode>
+<blockcode>
+== region.txt ==
+chr1:713500-714900
+chr3:82500-84000 
+</blockcode>
+</pre>
+</details>
+<h2 id="37-atac-correlation">3.7 ATAC: Correlation </h2>
+<p>The CDesk ATAC correlation module analyzes the similarity between 2 ATAC-seq samples by computing the genome-wide coverage correlation of two bigWig files using the multiBigwigSummary tool. It supports two modes: genome-wide binning or user-defined region-based analysis. The module calculates both Spearman and Pearson correlation coefficients, filters out regions with zero signal, and generates scatter plots for visual inspection of the correlations.</p>
+<p>Here is an example about how to use the CDesk ATAC correlation module.</p>
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk ATAC correlation <span class="token punctuation">\</span>
+<span class="token parameter variable">--bw1</span> /<span class="token punctuation">..</span>./sample1.bw <span class="token parameter variable">--bw2</span> /<span class="token punctuation">..</span>./sample2.bw <span class="token punctuation">\</span>
+<span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output_directory <span class="token parameter variable">--region</span> /<span class="token punctuation">..</span>./region.bed
+</code></pre><table>
+<thead>
+<tr>
+<th>Parameters<sup>(*necessary)</sup></th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--bw1*</td>
+<td>The first bw file</td>
+<td></td>
+</tr>
+<tr>
+<td>--bw2*</td>
+<td>The second bw file</td>
+<td></td>
+</tr>
+<tr>
+<td>-o,--output*</td>
+<td>The output directory</td>
+<td></td>
+</tr>
+<tr>
+<td>-t,--thread</td>
+<td>Numer of threads</td>
+<td>30</td>
+</tr>
+<tr>
+<td>--region</td>
+<td>Optional BED file for specific regions</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>If the pipeline runs successfully, there would be multiBigwigSummary result files and scatter plots in the output directory.</p>
+<div align="center">
+<img src="./images/ATAC_correlation.png" height="350">
+</div>
+<center><i>CDesk ATAC correlation example result</i></center>
+<br>
+<details>
+<summary>
+What should the input file look like?</summary>
+<pre><blockcode>
+== input.txt ==
+/mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments.bam
+/mnt/linzejie/CDesk_test/data/3.ATAC/6.igv/test_alignments2.bam 
+</blockcode>
+<blockcode>
+== region.txt ==
+chr1:713500-714900
+chr3:82500-84000 
+</blockcode>
+</pre>
+</details>
 
       </div>
       <div class="md-sidebar-toc">
@@ -542,11 +1063,23 @@ gene,sample
 
           </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
           <a href="#33-atac-dynamic" class="md-toc-link">
-            <p>3.3 ATAC: dynamic</p>
+            <p>3.3 ATAC: Dynamic</p>
 
           </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
           <a href="#34-atac-motif" class="md-toc-link">
-            <p>3.4 ATAC: motif</p>
+            <p>3.4 ATAC: Motif</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#35-atac-accessbility" class="md-toc-link">
+            <p>3.5 ATAC: Accessbility</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#36-atac-igv" class="md-toc-link">
+            <p>3.6 ATAC: IGV</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:18px">
+          <a href="#37-atac-correlation" class="md-toc-link">
+            <p>3.7 ATAC: Correlation</p>
 
           </a></div>
 </div>

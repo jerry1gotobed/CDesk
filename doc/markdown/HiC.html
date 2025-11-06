@@ -3,7 +3,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
-      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.19\crossnote\dependencies\katex\katex.min.css">
+      <link rel="stylesheet" href="file:///c:\Users\Jerry\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.20\crossnote\dependencies\katex\katex.min.css">
       
       
       
@@ -245,7 +245,7 @@ Min bin contact: 1
 <h2 id="52-hic-correlation">5.2 HiC: Correlation </h2>
 <p>The CDesk HiC correlation module extracts the observed/expected (O/E) interaction matrices from common genomic regions across input Hi-C samples and compares them by performing correlation and principal component analysis (PCA).</p>
 <p>Here is an example about how to use the CDesk HiC correlation module.</p>
-<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk HiC correlation <span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output <span class="token parameter variable">--chr</span> chr15
+<pre data-role="codeBlock" data-info="shell" class="language-shell shell"><code>CDesk HiC correlation <span class="token parameter variable">-i</span> /<span class="token punctuation">..</span>./input.csv <span class="token parameter variable">-o</span> /<span class="token punctuation">..</span>./output <span class="token parameter variable">--chr</span> chr15 <span class="token punctuation">(</span>--inter_chrom<span class="token punctuation">)</span>
 </code></pre><table>
 <thead>
 <tr>
@@ -290,8 +290,8 @@ Min bin contact: 1
 <p><a href="https://fan-c.readthedocs.io/en/latest/index.html">FAN-C</a> is employed to generate observed/expected (O/E) matrices from Hi-C data, which is fully compatible with Cooler files (.cool, .mcool) and Juicer files (.hic). Accordingly, every Hi-C file specified in the input CSV must be in one of these FAN-C–compatible formats.</p>
 <p>If the pipeline runs successfully, there would be a correlation heatmap pdf file, a PCA plot pdf file and a tmp directory that stores intermediate O/E matrix in the output directory.</p>
 <div align="center">
-<img src="./images/HiC_correlation_result.png">
-<img src="./images/HiC_correlation.png">
+<img src="./images/HiC_correlation_1.png" width="400">
+<img src="./images/HiC_correlation_2.png" width="400">
 </div>
 <center><i>CDesk HiC correlation example result</i></center>
 <details>
@@ -299,9 +299,8 @@ Min bin contact: 1
 <pre><blockcode>
 &gt;&gt;&gt;2025-09-09 13:13:39 Extract O/E matrix
 &gt;&gt;&gt;2025-09-09 14:09:57 O/E matrix extraction done
-&gt;&gt;&gt;2025-09-09 14:09:57 Start correlation analysis
-&gt;&gt;&gt;2025-09-09 14:09:58 Correlation analysis done
-Finished, you can see the results now
+&gt;&gt;&gt;2025-09-09 14:09:57 Correlation analysis and plot
+Done, you can see the result now
 </blockcode></pre>
 </details>
 <details>

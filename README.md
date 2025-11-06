@@ -1,12 +1,17 @@
-# CDesk
-CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. For detailed usage, you can see our [guideline handbook](/doc/html/Introduction.html).
+# CDesk handbook{ingnore}
+CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. Dedicated conda environment YAML files are supplied. To install, simply create the Conda environment from thess files (some functions may require additional software) and prepare the necessary species-specific data. Once configured, users can perform the desired analyses by entering the corresponding command on the command line.
 
-## Install
-### 1. Donwload the scripts
+<div align="center">
+
+![](./doc/images/CDesk.png)
+</div>
+
+## [0. Installation ](./doc/markdown/CDesk.html)
+1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
-### 2. Prepare the Conda Environments
+2. Prepare the Conda Environments
 ```
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
@@ -17,11 +22,17 @@ We provide Conda environments containing the required software, R, and Python de
 
 Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
 
-### 3. Prepare the Data and Write the Configuration File
+3. Prepare the Data and Write the Configuration File
+   
 You need to prepare reference data for the species of interest and specify the corresponding file paths in the config.json configuration file. This file stores paths to genomic data, annotation files, and any additional software installations.
 
 An example configuration is provided below. You can customize it to support additional species or data types. Note that not all fields are required — the specific data and tools needed depend on the task you intend to run. CDesk will check for required resources and exit with an informative error message if any are missing.
-```
+
+<details>
+<summary>
+ An example of configuration file</summary>
+<pre>
+<blockcode>
 {
   "software":{
     "cellranger":"/home/sugon/Install/cellranger-7.1.0/cellranger",
@@ -30,14 +41,15 @@ An example configuration is provided below. You can customize it to support addi
     "juicer_tools_jar":"/mnt/kuangjunqi/kuangjunqi/tools/hic/juicer_tools_1.22.01.jar",
     "dipc":"/mnt/zhaochengchen/Work/OTHER/4.KJQ/2.HiC-Pro/4.hickit/dip-c",
     "hickit":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit",
-    "hickit_js":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit.js"
+    "hickit_js":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit.js",
+    "celescope_conda":"/mnt/linzejie/miniconda3/envs/celescope"
   },
   "conda_env":{
     "CDesk":"/mnt/linzejie/miniconda3/envs/CDesk",
-    "CDesk_R":"/mnt/linzejie/miniconda3/envs/CDesk_R",
+    "CDesk_R":"/mnt/linzejie/miniconda3/envs/CDesk_py3.7",
     "CDesk_py3.7":"/mnt/linzejie/miniconda3/envs/CDesk_py3.7",
     "CDesk_py2.7":"/mnt/linzejie/miniconda3/envs/CDesk_py2.7"
-  },
+  }, 
   "data":{
     "mm10": {
       "mapping_index": "/mnt/zhaochengchen/Data/mm10/mm10",
@@ -123,17 +135,60 @@ An example configuration is provided below. You can customize it to support addi
       "bowtie2_mapindex":"/mnt/linzejie/data/Drseq_data/bowtie2/galGal6/galGal6",
       "singleron_mapindex":"/mnt/linzejie/data/celescope_data/galGal6",
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/galGal6"
-    },
-    "rmats_test":{
-    	"gff3":"/mnt/linzejie/CDesk_test/data/1.RNA/7.splice/annotation.gff3",
-	"refseq_gtf": "/mnt/linzejie/CDesk_test/data/1.RNA/7.splice/annotation.gtf"
-    },
-    "mm10_plusmajsat":{
-        "fasta":"/mnt/zhangzheting/reference/mm10_majsat/mm10.plusmajsat.fa",
-        "chromInfo": "/mnt/zhangzheting/reference/mm10_majsat/mm10.plusmajsat.chrom.size"
     }
   }
 }
+</blockcode>
+- software: Saves the ptional software requiring manual installation
+- conda_env: The conda environments path
+- data: Saves the genome reference data of different species
+</pre>
+</details>
 
-```
-## Hints
+## [1. BulkRNA ](./doc/markdown/BulkRNA.html)
+&emsp;&emsp;1.1 bulkRNA: Preprocess
+&emsp;&emsp;1.2 bulkRNA: Correlation
+&emsp;&emsp;1.3 bulkRNA: DEG
+&emsp;&emsp;1.4 bulkRNA: Enrich
+&emsp;&emsp;1.5 bulkRNA: Similarity
+&emsp;&emsp;1.6 bulkRNA: Clustering
+&emsp;&emsp;1.7 bulkRNA: Splice
+
+## [2. scRNA ](./doc/markdown/scRNA.html)
+&emsp;&emsp;2.1 scRNA: Preprocess
+&emsp;&emsp;2.2 scRNA: Cluster
+&emsp;&emsp;2.3 scRNA: Annotation
+&emsp;&emsp;2.4 scRNA: Marker
+&emsp;&emsp;2.5 scRNA: Trajectory
+&emsp;&emsp;2.6 scRNA: Similarity
+&emsp;&emsp;2.7 scRNA: Interaction
+&emsp;&emsp;2.8 scRNA: Integrate
+
+## [3. ATAC ](./doc/markdown/ATAC.html)
+&emsp;&emsp;3.1 ATAC: Preprocess
+&emsp;&emsp;3.2 ATAC: QC
+&emsp;&emsp;3.3 ATAC: Dynamic
+&emsp;&emsp;3.4 ATAC: Motif
+&emsp;&emsp;3.5 ATAC: Accessbility
+&emsp;&emsp;3.6 ATAC: IGV
+&emsp;&emsp;3.7 ATAC: Correlation
+
+## [4. ChIPseq&CUTTag ](./doc/markdown/ChIPseq&CUTTag.html)
+&emsp;&emsp;4.1 ATAC: Preprocess
+&emsp;&emsp;4.2 ATAC: QC
+&emsp;&emsp;4.3 ATAC: Pattern
+&emsp;&emsp;4.4 ATAC: Motif
+&emsp;&emsp;4.5 ATAC: Accessbility
+&emsp;&emsp;4.6 ATAC: IGV
+&emsp;&emsp;4.7 ATAC: Correlation
+
+## [5. HiC ](./doc/markdown/HiC.html)
+&emsp;&emsp;5.1 HiC: Preprocess
+&emsp;&emsp;5.2 HiC: Sample Correlation
+&emsp;&emsp;5.3 HiC: Matrix balancing and Format transformation
+&emsp;&emsp;5.4 HiC: TAD
+&emsp;&emsp;5.5 HiC: Compartment
+&emsp;&emsp;5.6 HiC: Loop
+&emsp;&emsp;5.7 HiC: 3D reconstruction
+&emsp;&emsp;5.8 HiC: Distance-contact
+&emsp;&emsp;5.9 HiC: Contact compare
