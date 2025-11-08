@@ -1,5 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # CDesk handbook
+=======
+# CDesk
+>>>>>>> 08197571a76ff05b5bf09678f1490a767ace07cc
 =======
 # CDesk
 >>>>>>> 08197571a76ff05b5bf09678f1490a767ace07cc
