@@ -224,4 +224,8 @@ An example configuration is provided below. You can customize it to support addi
 
 5.8 HiC: Distance-contact
 
+<<<<<<< HEAD
 5.9 HiC: Contact compare
+=======
+5.9 HiC: Contact compare
+>>>>>>> 08197571a76ff05b5bf09678f1490a767ace07cc

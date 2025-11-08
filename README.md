@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # CDesk handbook
+=======
+# CDesk
+>>>>>>> 08197571a76ff05b5bf09678f1490a767ace07cc
 CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. Dedicated conda environment YAML files are supplied. To install, simply create the Conda environment from thess files (some functions may require additional software) and prepare the necessary species-specific data. Once configured, users can perform the desired analyses by entering the corresponding command on the command line.
 
 <div align="center">
