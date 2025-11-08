@@ -1,4 +1,4 @@
-# CDesk handbook{ingnore}
+# CDesk handbook
 CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. Dedicated conda environment YAML files are supplied. To install, simply create the Conda environment from thess files (some functions may require additional software) and prepare the necessary species-specific data. Once configured, users can perform the desired analyses by entering the corresponding command on the command line.
 
 <div align="center">
@@ -146,49 +146,82 @@ An example configuration is provided below. You can customize it to support addi
 </details>
 
 ## [1. BulkRNA ](BulkRNA.html)
-&emsp;&emsp;1.1 bulkRNA: Preprocess
-&emsp;&emsp;1.2 bulkRNA: Correlation
-&emsp;&emsp;1.3 bulkRNA: DEG
-&emsp;&emsp;1.4 bulkRNA: Enrich
-&emsp;&emsp;1.5 bulkRNA: Similarity
-&emsp;&emsp;1.6 bulkRNA: Clustering
-&emsp;&emsp;1.7 bulkRNA: Splice
+1.1 bulkRNA: Preprocess
+
+1.2 bulkRNA: Correlation
+
+1.3 bulkRNA: DEG
+
+1.4 bulkRNA: Enrich
+
+1.5 bulkRNA: Similarity
+
+1.6 bulkRNA: Clustering
+
+1.7 bulkRNA: Splice
 
 ## [2. scRNA ](scRNA.html)
-&emsp;&emsp;2.1 scRNA: Preprocess
-&emsp;&emsp;2.2 scRNA: Cluster
-&emsp;&emsp;2.3 scRNA: Annotation
-&emsp;&emsp;2.4 scRNA: Marker
-&emsp;&emsp;2.5 scRNA: Trajectory
-&emsp;&emsp;2.6 scRNA: Similarity
-&emsp;&emsp;2.7 scRNA: Interaction
-&emsp;&emsp;2.8 scRNA: Integrate
+2.1 scRNA: Preprocess
+
+2.2 scRNA: Cluster
+
+2.3 scRNA: Annotation
+
+2.4 scRNA: Marker
+
+2.5 scRNA: Trajectory
+
+2.6 scRNA: Similarity
+
+2.7 scRNA: Interaction
+
+2.8 scRNA: Integrate
 
 ## [3. ATAC ](ATAC.html)
-&emsp;&emsp;3.1 ATAC: Preprocess
-&emsp;&emsp;3.2 ATAC: QC
-&emsp;&emsp;3.3 ATAC: Dynamic
-&emsp;&emsp;3.4 ATAC: Motif
-&emsp;&emsp;3.5 ATAC: Accessbility
-&emsp;&emsp;3.6 ATAC: IGV
-&emsp;&emsp;3.7 ATAC: Correlation
+3.1 ATAC: Preprocess
+
+3.2 ATAC: QC
+
+3.3 ATAC: Dynamic
+
+3.4 ATAC: Motif
+
+3.5 ATAC: Accessbility
+
+3.6 ATAC: IGV
+
+3.7 ATAC: Correlation
 
 ## [4. ChIPseq&CUTTag ](ChIPseq&CUTTag.html)
-&emsp;&emsp;4.1 ATAC: Preprocess
-&emsp;&emsp;4.2 ATAC: QC
-&emsp;&emsp;4.3 ATAC: Pattern
-&emsp;&emsp;4.4 ATAC: Motif
-&emsp;&emsp;4.5 ATAC: Accessbility
-&emsp;&emsp;4.6 ATAC: IGV
-&emsp;&emsp;4.7 ATAC: Correlation
+4.1 ATAC: Preprocess
+
+4.2 ATAC: QC
+
+4.3 ATAC: Pattern
+
+4.4 ATAC: Motif
+
+4.5 ATAC: Accessbility
+
+4.6 ATAC: IGV
+
+4.7 ATAC: Correlation
 
 ## [5. HiC ](HiC.html)
-&emsp;&emsp;5.1 HiC: Preprocess
-&emsp;&emsp;5.2 HiC: Sample Correlation
-&emsp;&emsp;5.3 HiC: Matrix balancing and Format transformation
-&emsp;&emsp;5.4 HiC: TAD
-&emsp;&emsp;5.5 HiC: Compartment
-&emsp;&emsp;5.6 HiC: Loop
-&emsp;&emsp;5.7 HiC: 3D reconstruction
-&emsp;&emsp;5.8 HiC: Distance-contact
-&emsp;&emsp;5.9 HiC: Contact compare
+5.1 HiC: Preprocess
+
+5.2 HiC: Sample Correlation
+
+5.3 HiC: Matrix balancing and Format transformation
+
+5.4 HiC: TAD
+
+5.5 HiC: Compartment
+
+5.6 HiC: Loop
+
+5.7 HiC: 3D reconstruction
+
+5.8 HiC: Distance-contact
+
+5.9 HiC: Contact compare
