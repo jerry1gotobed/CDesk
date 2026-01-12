@@ -9,7 +9,7 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 
 <div align="center">
 
-![](./images/CDesk.png)
+![](CDesk.png)
 </div>
 
 ## <font color="#00A3F5">Installation</font>
