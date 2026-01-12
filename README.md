@@ -15,6 +15,7 @@ git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
 2. Prepare the Conda Environments
 ```
+cd .../CDesk/env
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
 mamba env create -f CDesk_py2.7.yml
