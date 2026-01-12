@@ -9,19 +9,17 @@ show_help() {
     echo "  -i INPUT_DIRECTORY	Specify the input directory of input file (fastq.gz)"
     echo "  -o OUTPUT_DIRECTORY	Specify the output directory of output file"
     echo "  -t INT		Specify number of threads (default is 8)"
-    echo "  -l 1 or 2		1:Single sequencing, 2:Pair sequencing (default is 2)"
     echo "  -f		Use strict filtering"
     echo "  -r		Specify the resolutions"
 }
 
 # Default parameters
 THREAD=8
-LAYOUT=2
 Dofilter=False
 RESOLUTIONS=10000,100000,1000000
 
 # Software required
-tools=("jq" "cooler" "pairtools" "bgzip" "pairix" "bwa" "samtools")
+tools=("jq" "cooler" "pairtools" "bgzip" "pairix" "bwa" "samtools" "trim_galore")
 missing_tools=()
 echo "Checking required tools..."
 for tool in "${tools[@]}"; do
@@ -38,7 +36,7 @@ else
 fi
 
 # Parameters
-while getopts ":hs:i:o:t:l:f:r:z:" opt; do
+while getopts ":hs:i:o:t:f:r:z:" opt; do
     case ${opt} in
         h )
             show_help
@@ -55,14 +53,6 @@ while getopts ":hs:i:o:t:l:f:r:z:" opt; do
             ;;
         t )
             THREAD=${OPTARG}
-            ;;
-        l )
-            LAYOUT=${OPTARG}
-            if [[ "$LAYOUT" != "1" && "$LAYOUT" != "2" ]]; then
-                echo "Invalid value for -l: $LAYOUT. It must be 1 or 2." 1>&2
-                show_help
-                exit 1
-            fi
             ;;
         f )
             Dofilter=True
@@ -91,6 +81,12 @@ if [ -z "$INPUT_DIRECTORY" ] || [ -z "$SPECIES" ] || [ -z "$OUTPUT_DIRECTORY" ];
 fi
 
 CONFIG=$(cat $config_json | jq -r --arg species "$SPECIES" '.data[$species]')
+if [ -z "$CONFIG" ]; then
+    echo "Error: No configuration found for species '$SPECIES' in data.json"
+    exit 1
+fi
+
+# Assign the reference data
 mapping_index=$(echo "$CONFIG" | jq -r '.fasta')
 chromInfo=$(echo "$CONFIG" | jq -r '.chromInfo')
 
@@ -113,21 +109,13 @@ for resolution in "${RES_ARRAY[@]}"; do
     fi
 done
 
-# 提取文件名
-if [ "$LAYOUT" = "1" ]; then
-    file_list=$(ls "$INPUT_DIRECTORY"/*.{fastq,fq}.gz 2>/dev/null | sed 's/.fastq.gz//;s/.fq.gz//' | sort -u)
-elif [ "$LAYOUT" = "2" ]; then
-    file_list=$(ls "$INPUT_DIRECTORY"/*.{fastq,fq}.gz 2>/dev/null | sed 's/_1.fastq.gz//;s/_2.fastq.gz//;s/_1.fq.gz//;s/_2.fq.gz//' | sort -u)
-fi
-
-if [ -z "$file_list" ]; then
-    echo "Error: No valid FASTQ files found in directory '$INPUT_DIRECTORY'."
-    echo "Please make sure the files end with .fastq.gz / .fq.gz if single-end; _1.fastq.gz,_2.fastq.gz, / _1.fq.gz,_2.fq.gz if paired-end "
-    exit 1
-fi
+# Grab fq files
+file_list_single=$(ls "$INPUT_DIRECTORY"/*_single.{fastq,fq}.gz 2>/dev/null | sed 's/_single.fastq.gz//;s/_single.fq.gz//' | sort -u)
+file_list=$(ls "$INPUT_DIRECTORY"/*_{1,2}.{fastq,fq}.gz 2>/dev/null | sed 's/_1.fastq.gz//;s/_2.fastq.gz//;s/_1.fq.gz//;s/_2.fq.gz//' | sort -u)
 
 pairsam_path="${OUTPUT_DIRECTORY}/Pairsam"
 QC_path="${OUTPUT_DIRECTORY}/QC"
+trim_path="${OUTPUT_DIRECTORY}/QC/trim_galore"
 fastqc_path="${OUTPUT_DIRECTORY}/QC/fastqc"
 stats_path="${OUTPUT_DIRECTORY}/QC/stats"
 pairs_path="${OUTPUT_DIRECTORY}/Pairs"
@@ -138,6 +126,9 @@ if [ ! -d "${OUTPUT_DIRECTORY}" ]; then
 fi
 if [ ! -d "${QC_path}" ]; then
     mkdir -p ${QC_path}
+fi
+if [ ! -d "${trim_path}" ]; then
+    mkdir -p ${trim_path}
 fi
 if [ ! -d "${fastqc_path}" ]; then
     mkdir -p ${fastqc_path}
@@ -155,147 +146,99 @@ if [ ! -d "${cool_path}" ]; then
     mkdir -p ${cool_path}
 fi
 
+touch ${QC_path}/fastqc_multiqc.log
+echo '' > ${QC_path}/fastqc_multiqc.log
+
 get_time(){
     printf "%-19s" "`date +\"%Y-%m-%d %H:%M:%S\"`"
 }
 
+echo " "
+echo "--------------------------------------------INITIALIZING----------------------------------------------"
+echo "HiC data analysis pipeline is now running..."
+echo "Number of threads ---------- ${THREAD}"
+echo "Directory of data ---------- ${INPUT_DIRECTORY}"
+echo "Directory of result ---------- ${OUTPUT_DIRECTORY}"
+echo "Mapping index ---------- ${mapping_index}"
+echo "ChromInfo ---------- ${chromInfo}"
+echo "---------------------------------------START ANALYZING-----------------------------------------"
 ####################################################################################################
 #################################          ANALYSIS STEPS           ################################
 ####################################################################################################
 counter=0
 
-for FILE in $file_list; do
+# Single
+for FILE in $file_list_single; do
     counter=$((counter + 1))
     SAMPLE_PREFIX=$(basename ${FILE})
+    echo " "
     echo "-----------------------------------------------------------------------------------------------------"
-    echo "----------------------------第 ${counter} 个样本，样本名为 ${SAMPLE_PREFIX}--------------------------"
+    echo "----------------------------Number ${counter} sample: ${SAMPLE_PREFIX}--------------------------"
     echo "-----------------------------------------------------------------------------------------------------"
 
     FILE_NAME=""
     R1_FILE_NAME=""
     R2_FILE_NAME=""
 
-    if [ "${LAYOUT}" == "1" ]; then
-        if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
-            if [ -e "${FILE}.fastq.gz" ]; then
-                FILE_NAME="${FILE}.fastq.gz"
-                FILE_TYPE="fastq"
-            else
-                FILE_NAME="${FILE}.fq.gz"
-                FILE_TYPE="fq"
-            fi
-        else
-            echo "Error: Can not find ${SAMPLE_PREFIX} fq file, skip"
-            continue
-        fi
-    elif [ "${LAYOUT}" == "2" ]; then
-        if [ -e "${FILE}_1.fastq.gz" ] && [ -e "${FILE}_2.fastq.gz" ]; then
-            R1_FILE_NAME="${FILE}_1.fastq.gz"
-            R2_FILE_NAME="${FILE}_2.fastq.gz"
+    # Check according fq file
+    if [ -e "${FILE}_single.fastq.gz" ] || [ -e "${FILE}_single.fq.gz" ]; then
+        if [ -e "${FILE}_single.fastq.gz" ]; then
+            FILE_NAME="${FILE}_single.fastq.gz"
             FILE_TYPE="fastq"
-        elif [ -e "${FILE}_1.fq.gz" ] && [ -e "${FILE}_2.fq.gz" ]; then
-            R1_FILE_NAME="${FILE}_1.fq.gz"
-            R2_FILE_NAME="${FILE}_2.fq.gz"
-            FILE_TYPE="fq"
         else
-            echo "Error: Can not find the 2 ${SAMPLE_PREFIX} fq files,skip"
-            continue
+            FILE_NAME="${FILE}_single.fq.gz"
+            FILE_TYPE="fq"
         fi
+    else
+        echo "Error：Can not find ${SAMPLE_PREFIX} sample fq fiile, skip"
+        continue
     fi
-
-    echo " "
-    echo "--------------------------------------------INITIALIZING----------------------------------------------" 
-    echo "HiC data analysis pipeline is now running..."
-    echo "Number of threads ---------- ${THREAD}" 
-    echo "Directory of data ---------- ${INPUT_DIRECTORY}"
-    echo "Directory of result ---------- ${OUTPUT_DIRECTORY}"
-    echo "Name of sample ---------- ${SAMPLE_PREFIX}"
-    echo "File of data ---------- ${FILE_NAME}"
-    echo "File of R1 data ---------- ${R1_FILE_NAME}"
-    echo "File of R2 data ---------- ${R2_FILE_NAME}"
-    echo "Method of sequencing ---------- ${LAYOUT}"
-    echo "Mapping index ---------- ${mapping_index}"
-    echo "ChromInfo ---------- ${chromInfo}"
-    echo " "
-
-    echo " "
-    echo "-----------------------------------GENERATING DIRECTORY-------------------------------------" 
-    echo "Please wait, the directory for storing the results is being generated..."
-    echo "Store pairsam files for all samples ---------- ${pairsam_path}"
-    echo "Store stats result for all samples ---------- ${stats_path}"
-    echo "Store pairs result for all samples ---------- ${pairs_path}"
-    echo "Store cool result for all samples ---------- ${cool_path}"
-    echo " "
-
-    echo " "
-    echo "---------------------------------------START ANALYZING-----------------------------------------" 
-    echo "Preparation work completed, start analysis..."
 
     # fastqc ----------------------------------------------------------------------------------------
     echo ""
     echo "QC `get_time` fastqc ..."
+    echo ""
     if [[ "${FILE_TYPE}" == "fastq" ]]; then
-        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz
+        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz >> ${QC_path}/fastqc_multiqc.log 2>&1
     elif [[ "${FILE_TYPE}" == "fq" ]]; then
-        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz
+        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz >> ${QC_path}/fastqc_multiqc.log 2>&1
     fi
 
     # mapping ----------------------------------------------------------------------------------------
+    # trim
+    echo "single data `get_time` trim_galore ..."
     echo " "
+    trim_galore --gzip -j ${THREAD} ${FILE_NAME} --trim-n -o ${pairsam_path} --no_report_file --basename ${SAMPLE_PREFIX} > ${trim_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
+
     echo "paired data `get_time` mapping ..."
     echo " "
-    if [ "${LAYOUT}" == "1" ]; then
-        if [ "$Dofilter" = False ]; then
-            bwa mem -SP5M -t ${THREAD} \
-                ${mapping_index} \
-                ${FILE_NAME} > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
-            
-            cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
-                samtools view -bhS - | \
-                samtools view -h - | \
-                pairtools parse -c ${chromInfo} -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
-            
-            rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
-        elif [ "$Dofilter" = True ]; then
-            bwa mem -SP5M -t ${THREAD} \
-                ${mapping_index} \
-                ${FILE_NAME} > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
-            
-            cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
-                samtools view -bhS - | \
-                samtools view -h - | \
-                pairtools parse --min-mapq 30 --walks-policy 5unique --max-inter-align-gap 30 -c ${chromInfo} \
-                -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
-            
-            rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
-        fi
-    elif [ "${LAYOUT}" == "2" ]; then
-        if [ "$Dofilter" = False ]; then
-            bwa mem -SP5M -t ${THREAD} \
-                ${mapping_index} \
-                ${R1_FILE_NAME} \
-                ${R2_FILE_NAME} > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
-            
-            cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
-                samtools view -bhS - | \
-                samtools view -h - | \
-                pairtools parse -c ${chromInfo} -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
-            
-            rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
-        elif [ "$Dofilter" = True ]; then
-            bwa mem -SP5M -t ${THREAD} \
-                ${mapping_index} \
-                ${R1_FILE_NAME} \
-                ${R2_FILE_NAME} > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
-            
-            cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
-                samtools view -bhS - | \
-                samtools view -h - | \
-                pairtools parse --min-mapq 30 --walks-policy 5unique --max-inter-align-gap 30 -c ${chromInfo} \
-                -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
-            
-            rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
-        fi
+    if [ "$Dofilter" = False ]; then
+        bwa mem -SP5M -t ${THREAD} \
+            ${mapping_index} \
+            ${pairsam_path}/${SAMPLE_PREFIX}_trimmed.fq.gz > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
+        
+    rm ${pairsam_path}/${SAMPLE_PREFIX}_trimmed.fq.gz
+
+        cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
+            samtools view -bhS - | \
+            samtools view -h - | \
+            pairtools parse -c ${chromInfo} -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
+        
+        rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
+    elif [ "$Dofilter" = True ]; then
+        bwa mem -SP5M -t ${THREAD} \
+            ${mapping_index} \
+            ${pairsam_path}/${SAMPLE_PREFIX}_trimmed.fq.gz > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
+        
+    rm ${pairsam_path}/${SAMPLE_PREFIX}_trimmed.fq.gz
+
+        cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
+            samtools view -bhS - | \
+            samtools view -h - | \
+            pairtools parse --min-mapq 30 --walks-policy 5unique --max-inter-align-gap 30 -c ${chromInfo} \
+            -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
+        
+        rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
     fi
 
     # stats
@@ -337,9 +280,123 @@ for FILE in $file_list; do
     done
 done
 
-multiqc $fastqc_path --outdir $fastqc_path
+# Paired
+for FILE in $file_list; do
+    counter=$((counter + 1))
+    SAMPLE_PREFIX=$(basename ${FILE})
+    echo " "
+    echo "-----------------------------------------------------------------------------------------------------"
+    echo "----------------------------Number ${counter} sample: ${SAMPLE_PREFIX}--------------------------"
+    echo "-----------------------------------------------------------------------------------------------------"
+
+    FILE_NAME=""
+    R1_FILE_NAME=""
+    R2_FILE_NAME=""
+
+    if [ -e "${FILE}_1.fastq.gz" ] && [ -e "${FILE}_2.fastq.gz" ]; then
+        R1_FILE_NAME="${FILE}_1.fastq.gz"
+        R2_FILE_NAME="${FILE}_2.fastq.gz"
+        FILE_TYPE="fastq"
+    elif [ -e "${FILE}_1.fq.gz" ] && [ -e "${FILE}_2.fq.gz" ]; then
+        R1_FILE_NAME="${FILE}_1.fq.gz"
+        R2_FILE_NAME="${FILE}_2.fq.gz"
+        FILE_TYPE="fq"
+    else
+        echo "Error: Can not find the 2 ${SAMPLE_PREFIX} fq files,skip"
+        continue
+    fi
+
+    # fastqc ----------------------------------------------------------------------------------------
+    echo ""
+    echo "QC `get_time` fastqc ..."
+    echo ""
+    if [[ "${FILE_TYPE}" == "fastq" ]]; then
+        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fastq.gz >> ${QC_path}/fastqc_multiqc.log 2>&1
+    elif [[ "${FILE_TYPE}" == "fq" ]]; then
+        fastqc -o ${fastqc_path} ${INPUT_DIRECTORY}/${SAMPLE_PREFIX}*.fq.gz >> ${QC_path}/fastqc_multiqc.log 2>&1
+    fi
+
+    # mapping ----------------------------------------------------------------------------------------
+    # trim
+    echo "paired data `get_time` trim_galore ..."
+    echo " "
+    trim_galore --gzip -j ${THREAD} --paired ${R1_FILE_NAME} ${R2_FILE_NAME} --trim-n -o ${pairsam_path} --no_report_file --basename ${SAMPLE_PREFIX} > ${trim_path}/${SAMPLE_PREFIX}.TrimGalore.log 2>&1
+
+
+    echo "paired data `get_time` mapping ..."
+    echo " "
+    if [ "$Dofilter" = False ]; then
+        bwa mem -SP5M -t ${THREAD} \
+            ${mapping_index} \
+            ${pairsam_path}/${SAMPLE_PREFIX}_R1_val_1.fq.gz \
+            ${pairsam_path}/${SAMPLE_PREFIX}_R2_val_2.fq.gz > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
+        
+        rm ${pairsam_path}/${SAMPLE_PREFIX}_R1_val_1.fq.gz ${pairsam_path}/${SAMPLE_PREFIX}_R2_val_2.fq.gz
+
+        cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
+            samtools view -bhS - | \
+            samtools view -h - | \
+            pairtools parse -c ${chromInfo} -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
+        
+        rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
+    elif [ "$Dofilter" = True ]; then
+        bwa mem -SP5M -t ${THREAD} \
+            ${mapping_index} \
+            ${pairsam_path}/${SAMPLE_PREFIX}_R1_val_1.fq.gz \
+            ${pairsam_path}/${SAMPLE_PREFIX}_R2_val_2.fq.gz > ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam 2>/dev/null
+
+    rm ${pairsam_path}/${SAMPLE_PREFIX}_R1_val_1.fq.gz ${pairsam_path}/${SAMPLE_PREFIX}_R2_val_2.fq.gz
+        
+        cat ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam | \
+            samtools view -bhS - | \
+            samtools view -h - | \
+            pairtools parse --min-mapq 30 --walks-policy 5unique --max-inter-align-gap 30 -c ${chromInfo} \
+            -o ${pairsam_path}/${SAMPLE_PREFIX}.pairsam;
+        
+        rm ${pairsam_path}/${SAMPLE_PREFIX}.tmp.sam
+    fi
+
+    # stats
+    echo "paired data `get_time` stats ..."
+    echo " "
+    pairtools stats ${pairsam_path}/${SAMPLE_PREFIX}.pairsam > ${stats_path}/${SAMPLE_PREFIX}.pairsam.stats.txt &
+    pairtools sort --nproc ${THREAD} --memory 500G -o ${pairsam_path}/${SAMPLE_PREFIX}.sort.pairsam ${pairsam_path}/${SAMPLE_PREFIX}.pairsam
+    pairtools stats ${pairsam_path}/${SAMPLE_PREFIX}.sort.pairsam > ${stats_path}/${SAMPLE_PREFIX}.sort.pairsam.stats.txt &
+    pairtools dedup --mark-dups -o ${pairsam_path}/${SAMPLE_PREFIX}.sort.dedup.pairsam ${pairsam_path}/${SAMPLE_PREFIX}.sort.pairsam;
+    pairtools stats ${pairsam_path}/${SAMPLE_PREFIX}.sort.dedup.pairsam > ${stats_path}/${SAMPLE_PREFIX}.sort.dedup.pairsam.stats.txt
+    rm -fr ${pairsam_path}/${SAMPLE_PREFIX}.sort.pairsam;
+
+    pairtools select '(pair_type == "UU") or (pair_type == "UR") or (pair_type == "RU")' -o ${pairsam_path}/${SAMPLE_PREFIX}.flt.pairsam ${pairsam_path}/${SAMPLE_PREFIX}.sort.dedup.pairsam;
+    rm -fr ${pairsam_path}/${SAMPLE_PREFIX}.sort.dedup.pairsam;
+
+    pairtools split --output-pairs ${pairsam_path}/${SAMPLE_PREFIX}.pairs ${pairsam_path}/${SAMPLE_PREFIX}.flt.pairsam;
+    rm -fr ${pairsam_path}/${SAMPLE_PREFIX}.flt.pairsam;
+
+    grep -v " " ${pairsam_path}/${SAMPLE_PREFIX}.pairs > ${pairsam_path}/${SAMPLE_PREFIX}.pairs2;
+    rm -fr ${pairsam_path}/${SAMPLE_PREFIX}.pairs;
+    mv ${pairsam_path}/${SAMPLE_PREFIX}.pairs2 ${pairs_path}/${SAMPLE_PREFIX}.pairs;
+
+    bgzip ${pairs_path}/${SAMPLE_PREFIX}.pairs
+    pairix -f ${pairs_path}/${SAMPLE_PREFIX}.pairs.gz
+
+    # bin
+    echo "cooler cload pairix `get_time` binning ..."
+    echo " "
+    for resolution in "${RES_ARRAY[@]}"; do
+        if (( resolution >= 1000000 )); then
+            suffix="${resolution:0:$((${#resolution}-6))}M"
+        elif (( resolution >= 1000 )); then
+            suffix="${resolution:0:$((${#resolution}-3))}k"
+        else
+            suffix="${resolution}"
+        fi
+        
+        cooler cload pairix -p ${THREAD} ${chromInfo}:${resolution} ${pairs_path}/${SAMPLE_PREFIX}.pairs.gz ${cool_path}/${SAMPLE_PREFIX}.${suffix}.cool >/dev/null 2>&1
+    done
+done
+
+multiqc $fastqc_path --outdir $fastqc_path >> ${QC_path}/fastqc_multiqc.log 2>&1
 cool_files=($cool_path/*.cool)
-total_files=${#cool_files[@]}
 
 for cool_file in "${cool_files[@]}"; do
     # 获取分辨率信息
@@ -388,4 +445,4 @@ for cool_file in "${cool_files[@]}"; do
     }' >> "${OUTPUT_DIRECTORY}/QC/Resolution_evaluation.txt"
 done
 
-echo "HiC preprocessing has been finished!!!"
+echo "Finished, you can check the results now"

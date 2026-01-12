@@ -2,12 +2,14 @@ import argparse
 import os
 import subprocess
 import fanc
+import fanc.plotting as fancplot
 import sys
 from datetime import datetime
 import shutil
+import matplotlib.pyplot as plt
+import pandas as pd
 
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 tools = ['fanc']
@@ -73,27 +75,70 @@ try:
     subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     print(f"Error：{e.stderr.decode()}")
-print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Merge done")
+print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Filtration done")
 
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Export to BEDPE")
 command = ["fanc","loops",os.path.join(tmp_directory, sample+"_merged.loops"),"-t", str(thread), "-f",
-           "-b",os.path.join(output_directory, sample+".bedpe")]
+           "-b",os.path.join(tmp_directory, sample+".bedpe")]
 try:
     subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     print(f"Error：{e.stderr.decode()}")
+command = f"awk '$1 == $4 && $1 !~ /_/ && $4 !~ /_/' {os.path.join(tmp_directory, sample+'.bedpe')} > {os.path.join(output_directory, sample+'.loop.bedpe')}"
+subprocess.run(command,check=True,shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Exportion done")
 
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Loop aggregate plot")
-command = ["fanc","aggregate",hic_file,os.path.join(output_directory, sample + ".bedpe"),os.path.join(tmp_directory, sample + ".agg"),
-    "-p",os.path.join(output_directory, "loop_aggregate.pdf"),
-    "--loops","--loop-strength",os.path.join(output_directory, "loop_strength.bed"),
-    "--labels","Loop anchor","--label-locations","0.5"]
-try:
-    subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
-except subprocess.CalledProcessError as e:
-    print(f"Error：{e.stderr.decode()}")
+hic_rao = fanc.load(hic_file)
+loops = fanc.load(os.path.join(output_directory, sample+".loop.bedpe"))
+loops_am = fanc.AggregateMatrix.from_center_pairs(hic_rao, loops.region_pairs())
+ax = fancplot.aggregate_plot(loops_am, vmin=-1, vmax=1,
+                             relative_label_locations=[0.5],
+                             labels=['loop anchor'])
+fig = ax.get_figure()
+fig.savefig(os.path.join(output_directory, "loop_aggregate.pdf"))
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Loop aggregate plot done")
+
+print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Grab O/E matrix and calculate loop strength")
+command = ["fanc","dump","-e","--only-intra",hic_file,os.path.join(tmp_directory, sample + '.oe.txt')]
+subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+loop_bed = pd.read_csv(os.path.join(output_directory, sample+".loop.bedpe"),sep='\t',names=['region1','start1','end1','region2','start2','end2','tag','loop'])
+oe_bed =  pd.read_csv(os.path.join(tmp_directory,sample+".oe.txt"),sep='\t',names=['region1','start1','end1','region2','start2','end2','o/e'])
+results = []
+for chrom_pair in loop_bed[['region1', 'region2']].drop_duplicates().itertuples(index=False):
+    chrom1, chrom2 = chrom_pair
+    chrom_loops = loop_bed[
+        (loop_bed['region1'] == chrom1) & 
+        (loop_bed['region2'] == chrom2)
+    ]
+    chrom_oe = oe_bed[
+        (oe_bed['region1'] == chrom1) & 
+        (oe_bed['region2'] == chrom2)
+    ]
+    if len(chrom_oe) == 0:
+        continue
+    for _, loop_row in chrom_loops.iterrows():
+        mask = (
+            (chrom_oe['start1'] >= loop_row['start1']) &
+            (chrom_oe['end1'] <= loop_row['end1']) &
+            (chrom_oe['start2'] >= loop_row['start2']) &
+            (chrom_oe['end2'] <= loop_row['end2'])
+        )
+        matching_oe = chrom_oe[mask]
+        if len(matching_oe) > 0:
+            avg_oe = matching_oe['o/e'].mean()
+            results.append({
+                'region1': chrom1,
+                'start1': loop_row['start1'],
+                'end1': loop_row['end1'],
+                'region2': chrom2,
+                'start2': loop_row['start2'],
+                'end2': loop_row['end2'],
+                'avg_o/e': avg_oe
+            })
+result_df = pd.DataFrame(results)
+result_df.to_csv(os.path.join(output_directory, 'loop_strength.bed'),sep='\t')
+print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} O/E matrix extraction and loop strength calculation done")
 
 input_file = os.path.join(output_directory, "loop_strength.bed")
 output_file = os.path.join(output_directory, "arc.bed")

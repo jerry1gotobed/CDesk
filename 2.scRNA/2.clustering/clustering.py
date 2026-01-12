@@ -13,16 +13,12 @@ warnings.filterwarnings("ignore", category=UserWarning, module='umap')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-# 初始化解析器
 parser = argparse.ArgumentParser(description="Seurat-like Processing Pipeline")
 
-# 添加参数
 parser.add_argument('-i', '--input', type=str, required=True, help="Input directory")
 parser.add_argument('-o', '--output', type=str, required=True, help="Output directory")
 parser.add_argument('-n', '--name', type=str, required=True, help="Prefix name")
 
-
-# 参数可以有Default值
 parser.add_argument('--min_cells', type=int, default=3, help="Default: 3")
 parser.add_argument('--min_features', type=int, default=200, help="Default: 200")
 parser.add_argument('--nFeature_RNA_min', type=int, default=200, help="Default: 200")
@@ -34,25 +30,23 @@ parser.add_argument('--res', type=float, default=1, help="Default: 1")
 parser.add_argument('--width', type=float, default=10, help="Default: 10")
 parser.add_argument('--height', type=float, default=8, help="Default: 8")
 
-# 解析参数
 args = parser.parse_args()
 
-# 输出获取到的参数
-print(f"输入路径: {args.input}")
-print(f"输出路径: {args.output}")
-print(f"最小细胞数: {args.min_cells}")
-print(f"最小特征数: {args.min_features}")
+print(f"Input: {args.input}")
+print(f"Output: {args.output}")
+print(f"Genes filtration minimum cells threshold: {args.min_cells}")
+print(f"Cells filtration minimum features threshold: {args.min_features}")
 print(f"nFeature_RNA_min: {args.nFeature_RNA_min}")
 print(f"nFeature_RNA_max: {args.nFeature_RNA_max}")
-print(f"线粒体百分比: {args.mt_percent}")
-print(f"变量特征数: {args.variable_features}")
-print(f"首选维度数: {args.dim_prefer}")
-print(f"分辨率: {args.res}")
-print(f"文件前缀: {args.name}")
+print(f"Cells filtration minimum features threshold: {args.mt_percent}")
+print(f"Number of variable features: {args.variable_features}")
+print(f"PCA dimensions: {args.dim_prefer}")
+print(f"Resolution: {args.res}")
+print(f"Ouput prefix: {args.name}")
 
 # Command line arguments (replace with your actual input and output)
-input_seurat = args.input  # 输入路径
-output_directory = args.output  # 输出路径
+input_seurat = args.input  
+output_directory = args.output  
 sample_name = args.name
 
 # Parameters with default values
@@ -69,7 +63,7 @@ height = args.height # 8
 
 # Ensure output directory exists
 if not os.path.exists(output_directory):
-    os.makedirs(output_directory)  # 创建目录，包括多级目录
+    os.makedirs(output_directory)
     print(f"Output directory created: {output_directory}")
 
 # Read input data
@@ -133,14 +127,12 @@ sc.tl.leiden(
 
 mpl.rcParams['figure.figsize'] = [width, height]
 with PdfPages(f'{output_directory}/{sample_name}_Scanpy_clustering.pdf') as pdf:
-    # UMAP 图像保存到 PDF
     sc.pl.umap(adata, color="leiden", show=False)
-    pdf.savefig()  # 保存当前图像
+    pdf.savefig()
     plt.close()
 
-    # t-SNE 图像保存到 PDF
     sc.pl.tsne(adata, color="leiden", show=False)
-    pdf.savefig()  # 保存当前图像
+    pdf.savefig()  
     plt.close()
 
 adata.write(f"{output_directory}/{sample_name}_scanpy_clustering.h5ad")

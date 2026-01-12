@@ -7,6 +7,7 @@ import pandas as pd
 
 def process_sample(sample_path, sample_name,output_dir, genome,mode,start,end):
     """处理单个样本"""
+    print(f'Processing {sample_name} ......')
     try:
         # 创建样本专属目录
         sample_output_dir = os.path.join(output_dir, f"{sample_name}_motifDir")

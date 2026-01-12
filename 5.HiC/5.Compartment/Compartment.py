@@ -39,7 +39,6 @@ parser.add_argument('-s', '--species', type=str, default='no', help="The species
 parser.add_argument('--width', type=float, default=10, help="Default: 10")
 parser.add_argument('--height', type=float, default=8, help="Default: 8")
 
-# 解析参数
 args = parser.parse_args()
 
 meta = args.input

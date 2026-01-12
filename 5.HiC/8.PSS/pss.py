@@ -43,11 +43,9 @@ heatmap_x_max=str(args.heatmap_x_max)
 width=str(args.width)
 height=str(args.height)
 
-rscript = os.getenv("RSCRIPT_PATH", "Rscript")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 tools = ['fanc']
@@ -77,6 +75,7 @@ for file in list(meta['file']):
         print('The resolutions of the hic files should be the same')
         sys.exit(1)
 
+resolution = resolutions[0]
 tmp_dir = os.path.join(output_dir,'tmp')
 os.makedirs(output_dir,exist_ok=True)
 os.makedirs(tmp_dir,exist_ok=True)
@@ -103,11 +102,11 @@ print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Distance_contact compu
 
 dist_contact_files = [os.path.join(tmp_dir,os.path.basename(i).split('@')[0] + '.dist.contact.txt') for i in list(meta['file'])] 
 file_list = ','.join(dist_contact_files)
-tags = ','.join(list(meta['tag']))
+tags = ','.join(list(meta['tag'].astype(str)))
 
 # # PSS plot
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Plot PSS")
-command = [rscript,os.path.join(current_dir,'pss.R'),file_list,tags,output_dir,
+command = ['Rscript',os.path.join(current_dir,'pss.R'),file_list,tags,output_dir,str(resolution),
             bin_size,curve_mean_min,curve_bin_min,curve_x_min,curve_x_max,expcurve_y_bias,
             expcurve_x_min,expcurve_x_max,heatmap_x_min,heatmap_x_max,width,height]
 try:

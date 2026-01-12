@@ -1,12 +1,18 @@
-# CDesk
+---
+html:
+    toc: true
+---
+# CDesk{ingnore}
+
 CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. Dedicated conda environment YAML files are supplied. To install, simply create the Conda environment from thess files (some functions may require additional software) and prepare the necessary species-specific data. Once configured, users can perform the desired analyses by entering the corresponding command on the command line.
+[ CDesk handbook ](https://jerry1gotobed.github.io/CDesk.github.io/CDesk.html)
 
 <div align="center">
 
-![](./doc/images/CDesk.png)
+![](./images/CDesk.png)
 </div>
 
-## [0. Installation ](./doc/CDesk.html)
+## <font color="#00A3F5">Installation</font>
 1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
@@ -35,24 +41,24 @@ An example configuration is provided below. You can customize it to support addi
 <blockcode>
 {
   "software":{
-    "cellranger":"/home/sugon/Install/cellranger-7.1.0/cellranger",
+    "cellranger":"/mnt/linzejie/software/cellranger-10.0.0/bin/cellranger",
     "DrSeq":"/usr/local/bin/DrSeq",
     "dnbc4tools":"/mnt/linzejie/software/dnbc4tools2.1.3/dnbc4tools",
     "juicer_tools_jar":"/mnt/kuangjunqi/kuangjunqi/tools/hic/juicer_tools_1.22.01.jar",
-    "dipc":"/mnt/zhaochengchen/Work/OTHER/4.KJQ/2.HiC-Pro/4.hickit/dip-c",
+    "dipc":"/mnt2/zhaochengchen/Work/OTHER/4.KJQ/2.HiC-Pro/4.hickit/dip-c",
     "hickit":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit",
     "hickit_js":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit.js",
-    "celescope_conda":"/mnt/linzejie/miniconda3/envs/celescope"
+    "celescope_path":"/mnt3/linzejie/miniconda3/envs/celescope/bin"
   },
   "conda_env":{
-    "CDesk":"/mnt/linzejie/miniconda3/envs/CDesk",
-    "CDesk_R":"/mnt/linzejie/miniconda3/envs/CDesk_py3.7",
-    "CDesk_py3.7":"/mnt/linzejie/miniconda3/envs/CDesk_py3.7",
-    "CDesk_py2.7":"/mnt/linzejie/miniconda3/envs/CDesk_py2.7"
+    "CDesk":"/mnt3/linzejie/miniconda3/envs/CDesk",
+    "CDesk_R":"/mnt3/linzejie/miniconda3/envs/CDesk_R",
+    "CDesk_py3.7":"/mnt3/linzejie/miniconda3/envs/CDesk_py3.7",
+    "CDesk_py2.7":"/mnt3/linzejie/miniconda3/envs/CDesk_py2.7"
   }, 
   "data":{
     "mm10": {
-      "mapping_index": "/mnt/zhaochengchen/Data/mm10/mm10",
+      "hisat2_index": "/mnt/zhaochengchen/Data/mm10/mm10",
       "refseq_gtf": "/mnt/zhaochengchen/Data/mm10/mm10.ncbiRefSeq.WithUCSC.gtf",
       "refseq_bed": "/mnt/zhaochengchen/Data/mm10/mm10.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/mm10/mm10.len",
@@ -69,7 +75,7 @@ An example configuration is provided below. You can customize it to support addi
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/mm10"
     },
     "rn7": {
-      "mapping_index": "/mnt/liudong/data/Genome/rn7/rn7",
+      "hisat2_index": "/mnt/liudong/data/Genome/rn7/rn7",
       "refseq_gtf": "/mnt/liudong/data/Genome/rn7/rn7.refGene.gtf",
       "refseq_bed": "/mnt/liudong/data/Genome/rn7/rn7.refGene.fix.bed",
       "chromInfo": "/mnt/liudong/data/Genome/rn7/rn7.len",
@@ -86,7 +92,7 @@ An example configuration is provided below. You can customize it to support addi
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/rn7"
     },
     "hg38": {
-      "mapping_index": "/mnt/zhaochengchen/Data/hg38/hg38",
+      "hisat2_index": "/mnt/zhaochengchen/Data/hg38/hg38",
       "refseq_gtf": "/mnt/zhaochengchen/Data/hg38/hg38.ncbiRefSeq.WithUCSC.gtf",
       "refseq_bed": "/mnt/zhaochengchen/Data/hg38/hg38.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/hg38/hg38.len",
@@ -103,7 +109,7 @@ An example configuration is provided below. You can customize it to support addi
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/hg38"
     },
     "susScr11": {
-      "mapping_index": "/mnt/zhaochengchen/Data/susScr11/susScr11",
+      "hisat2_index": "/mnt/zhaochengchen/Data/susScr11/susScr11",
       "refseq_gtf": "/mnt/liudong/data/Genome/susScr11/susScr11.ncbiRefSeq.gtf",
       "refseq_bed": "/mnt/liudong/data/Genome/susScr11/susScr11.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/susScr11/susScr11.chrom.sizes",
@@ -120,9 +126,9 @@ An example configuration is provided below. You can customize it to support addi
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/susScr11"
     },
     "galGal6": {
-      "mapping_index": "/mnt/zhaochengchen/Data/Gal6/galGal6",
+      "hisat2_index": "/mnt/zhaochengchen/Data/Gal6/galGal6",
       "refseq_gtf": "/mnt/zhaochengchen/Data/Gal6/galGal6.ncbiRefSeq.WithUCSC.gtf",
-      "refseq_bed": "/mnt/zhaochengchen/Data/Gal6/galGal6.refseq.bed",
+      "refseq_bed": "/mnt/zhaochengchen/Data/Gal6/Gal6.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/Gal6/galGal6.chrom.sizes",
       "fasta": "/mnt/linzejie/data/fasta/galGal6.fa",
       "TE_idx": "/mnt/linzejie/data/galGal6.exclusive.idx",
@@ -145,83 +151,53 @@ An example configuration is provided below. You can customize it to support addi
 </pre>
 </details>
 
-## [1. BulkRNA ](./doc/BulkRNA.html)
-1.1 bulkRNA: Preprocess
+## <font color="#00A3F5">0. Tools and tips </font>
+&emsp;&emsp;0.1 Tools: Data download
 
-1.2 bulkRNA: Correlation
+## <font color="#00A3F5">1. BulkRNA</font>
+&emsp;&emsp;1.1 bulkRNA: Preprocess
+&emsp;&emsp;1.2 bulkRNA: Correlation
+&emsp;&emsp;1.3 bulkRNA: DEG
+&emsp;&emsp;1.4 bulkRNA: Enrich
+&emsp;&emsp;1.5 bulkRNA: Similarity
+&emsp;&emsp;1.6 bulkRNA: Clustering
+&emsp;&emsp;1.7 bulkRNA: Splice
 
-1.3 bulkRNA: DEG
+## <font color="#00A3F5">2. scRNA</font>
+&emsp;&emsp;2.1 scRNA: Preprocess
+&emsp;&emsp;2.2 scRNA: Cluster
+&emsp;&emsp;2.3 scRNA: Annotation
+&emsp;&emsp;2.4 scRNA: Marker
+&emsp;&emsp;2.5 scRNA: Trajectory
+&emsp;&emsp;2.6 scRNA: Similarity
+&emsp;&emsp;2.7 scRNA: Interaction
+&emsp;&emsp;2.8 scRNA: Integrate
 
-1.4 bulkRNA: Enrich
+## <font color="#00A3F5">3. ATAC</font>
+&emsp;&emsp;3.1 ATAC: Preprocess
+&emsp;&emsp;3.2 ATAC: QC
+&emsp;&emsp;3.3 ATAC: Dynamic
+&emsp;&emsp;3.4 ATAC: Motif
+&emsp;&emsp;3.5 ATAC: Accessbility
+&emsp;&emsp;3.6 ATAC: IGV
+&emsp;&emsp;3.7 ATAC: Correlation
 
-1.5 bulkRNA: Similarity
+## <font color="#00A3F5">4. ChIPseq&CUTTag</font>
+&emsp;&emsp;4.1 ATAC: Preprocess
+&emsp;&emsp;4.2 ATAC: QC
+&emsp;&emsp;4.3 ATAC: Pattern
+&emsp;&emsp;4.4 ATAC: Motif
+&emsp;&emsp;4.5 ATAC: Accessbility
+&emsp;&emsp;4.6 ATAC: IGV
+&emsp;&emsp;4.7 ATAC: Correlation
 
-1.6 bulkRNA: Clustering
-
-1.7 bulkRNA: Splice
-
-## [2. scRNA ](./doc/scRNA.html)
-2.1 scRNA: Preprocess
-
-2.2 scRNA: Cluster
-
-2.3 scRNA: Annotation
-
-2.4 scRNA: Marker
-
-2.5 scRNA: Trajectory
-
-2.6 scRNA: Similarity
-
-2.7 scRNA: Interaction
-
-2.8 scRNA: Integrate
-
-## [3. ATAC ](./doc/ATAC.html)
-3.1 ATAC: Preprocess
-
-3.2 ATAC: QC
-
-3.3 ATAC: Dynamic
-
-3.4 ATAC: Motif
-
-3.5 ATAC: Accessbility
-
-3.6 ATAC: IGV
-
-3.7 ATAC: Correlation
-
-## [4. ChIPseq&CUTTag ](./doc/ChIPseq&CUTTag.html)
-4.1 ATAC: Preprocess
-
-4.2 ATAC: QC
-
-4.3 ATAC: Pattern
-
-4.4 ATAC: Motif
-
-4.5 ATAC: Accessbility
-
-4.6 ATAC: IGV
-
-4.7 ATAC: Correlation
-
-## [5. HiC ](./doc/HiC.html)
-5.1 HiC: Preprocess
-
-5.2 HiC: Sample Correlation
-
-5.3 HiC: Matrix balancing and Format transformation
-
-5.4 HiC: TAD
-
-5.5 HiC: Compartment
-
-5.6 HiC: Loop
-
-5.7 HiC: 3D reconstruction
-
-5.8 HiC: Distance-contact
-
-5.9 HiC: Contact compare
+## <font color="#00A3F5">5. HiC</font>
+&emsp;&emsp;5.1 HiC: Preprocess
+&emsp;&emsp;5.2 HiC: Sample Correlation
+&emsp;&emsp;5.3 HiC: Matrix balancing and Format transformation
+&emsp;&emsp;5.4 HiC: TAD
+&emsp;&emsp;5.5 HiC: Compartment
+&emsp;&emsp;5.6 HiC: Loop
+&emsp;&emsp;5.7 HiC: 3D reconstruction
+&emsp;&emsp;5.8 HiC: Distance-contact
+&emsp;&emsp;5.9 HiC: Contact compare

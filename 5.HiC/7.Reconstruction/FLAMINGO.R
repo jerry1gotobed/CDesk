@@ -1,5 +1,6 @@
 library(FLAMINGOrLite)
 
+system("ulimit -v 50000000") 
 args = commandArgs(trailingOnly=TRUE)
 
 hic_file <- args[1]
@@ -37,7 +38,10 @@ available_domain = strawr::readHicBpResolutions(hic_file)
 if (!domain_res %in% available_domain){
   cat('Available domain resolutions:')
   cat(available_domain)
-  stop('Please specify the available domain resolution')
+  stop('Please specify the available domain resolutioni\n')
+}
+if (domain_res <= frag_res || domain_res %% frag_res != 0){
+  stop('Domain res should be > and a multiple of frag res')
 }
 
 new_chr_num <- sub("chr","chchrr",chr_num)

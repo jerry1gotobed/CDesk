@@ -8,12 +8,10 @@ import os
 import subprocess
 import argparse
 
-rscript = os.getenv("RSCRIPT_PATH", "Rscript")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Check the environment
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 def get_matrix(hic,chr,output_dir):
@@ -50,12 +48,14 @@ parser.add_argument('--hic1', type=str, required=True, help="The first hic file"
 parser.add_argument('--hic2', type=str, required=True, help="The second hic file")
 parser.add_argument('-o','--output',type=str,required=True,help="Specify the output directory")
 parser.add_argument('--chr',type=str,required=True,help="Specify the chromosome")
+parser.add_argument('--A_min',type=str,required=True,help="Specify the A_min parameter")
 args = parser.parse_args()
 
 hic1 = args.hic1
 hic2 = args.hic2
 output_dir = args.output
 chr = args.chr
+A_min = args.A_min
 
 hic1_check = fanc.load(hic1)
 hic2_check = fanc.load(hic2)
@@ -82,7 +82,7 @@ prefix2 = os.path.basename(hic2).split('@')[0]
 
 # Contact compare and Delta plot
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Do contact comparison and Delta plot")
-command = [rscript,os.path.join(current_dir,'compare.R'),output_dir,prefix1,prefix2,chr]
+command = ['Rscript',os.path.join(current_dir,'compare.R'),output_dir,prefix1,prefix2,chr,A_min]
 try:
     subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:

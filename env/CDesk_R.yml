@@ -5,6 +5,7 @@ channels:
   - bioconda
   - default
 dependencies:
+  - python=3.12
   - cmake
   - r-base=4.3
   - r-r.utils
@@ -51,10 +52,11 @@ dependencies:
   - r-clustree
   - r-optparse
   - r-presto
-  - conda-forge::r-harmony
+  - r-harmony
   - bioconductor-regioner
   - bioconductor-bsgenome.mmusculus.ucsc.mm10
   - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
   - bioconductor-bsgenome.hsapiens.ucsc.hg38
   - bioconductor-bsgenome.ggallus.ucsc.galgal6
   - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
+  - macs3

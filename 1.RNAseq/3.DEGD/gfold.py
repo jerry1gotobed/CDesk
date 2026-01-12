@@ -50,20 +50,27 @@ def gfoldMode(args):
         result = chardet.detect(f.read(1000))  # Check encoding
         encoding = result['encoding']
     meta_test = pd.read_csv(meta_file, sep=None, engine='python', encoding=encoding,header=0)
-    required = ["sample", "group","bam"]
+    required = ["sample", "group"]
     missing = set(required) - set(meta_test.columns)
     if missing:
-        print('Need columns: sample,group,bam')
+        print('Need columns: sample,group,bam/readcnt')
         sys.exit(1)
-    for bam in meta_test['bam']:
-        if not os.path.exists(bam):
-            print(f'Can not find {bam}')
-            sys.exit(1)
+    
+    if 'bam' in meta_test.columns:
+        for bam in meta_test['bam']:
+            if not os.path.exists(bam):
+                print(f'Can not find {bam}')
+                sys.exit(1)
+
     if 'readcnt' in meta_test.columns:
         for readcnt in meta_test['readcnt']:
             if not os.path.exists(readcnt):
                 print(f'Can not find {readcnt}')
                 sys.exit(1)
+
+    if 'bam' not in meta_test.columns and 'readcnt' not in meta_test.columns:
+        print('Need columns: sample,group,bam/readcnt')
+        sys.exit(1)
 
     # Read the meta file 
     metas = readMetaFile(meta_file)
@@ -74,6 +81,7 @@ def gfoldMode(args):
     # Differential analysis
     print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Start gfold analysis")
     for meta in metas:
+        print(f'Analyze {meta[0]} ...')
         result = gfoldAnalysis(meta=meta,goi=goi,plot=plot,output_dir=output_dir,fc_threshold=fc_threshold,width=width,height=height)
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -152,8 +160,8 @@ def gfoldAnalysis(meta:tuple, plot:bool,goi:str,output_dir:str,fc_threshold:floa
     
     os.chdir(original_directory)
     # Save the result
-    df = pd.read_csv("{}/diff/{}.diff".format(output_dir,name), sep="\t", comment="#",header=None, index_col=0)
-    df = df[[1,2,3,4,5,6]]
+    df = pd.read_csv("{}/diff/{}.diff".format(output_dir,name), sep="\t", comment="#",header=None)
+    df = df[[0,2,3,4,5,6]]
     df.columns = ["Gene","GFOLD", "E-FDR", "log2fdc",'RPKM1','RPKM2']
     result=df
     foldchange=float(fc_threshold)
@@ -162,7 +170,7 @@ def gfoldAnalysis(meta:tuple, plot:bool,goi:str,output_dir:str,fc_threshold:floa
     result.loc[((result["GFOLD"]>fc_max)),'sig']='up'
     result.loc[((result["GFOLD"]<fc_min)),'sig']='down'
     result.index.name = 'gene_name'
-    result.to_csv(os.path.join(output_dir,name+'.csv'),sep=',')
+    result.to_csv(os.path.join(output_dir,name+'.csv'),sep=',',index=None)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     # Plot

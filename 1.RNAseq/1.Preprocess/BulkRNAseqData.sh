@@ -77,7 +77,7 @@ if [ -z "$CONFIG" ]; then
 fi
 
 # Assign the reference data
-mapping_index=$(echo "$CONFIG" | jq -r '.mapping_index')
+mapping_index=$(echo "$CONFIG" | jq -r '.hisat2_index')
 mapping_gtf=$(echo "$CONFIG" | jq -r '.refseq_gtf')
 gfold_gtf=$(echo "$CONFIG" | jq -r '.refseq_gtf') 
 RSeQC_bed=$(echo "$CONFIG" | jq -r '.refseq_bed')
@@ -94,10 +94,6 @@ if [ -z "$gfold_gtf" ]; then
     echo "Error: 'gfold_gtf' is not set or empty in the CONFIG."
     exit 1
 fi
-if [ -z "$RSeQC_bed" ]; then
-    echo "Error: 'refseq_bed' is not set or empty in the CONFIG."
-    exit 1
-fi
 
 if ! ls "${mapping_index}"*.ht* 1> /dev/null 2>&1; then
   echo "HISAT2 index files are missing. Please check the index path."
@@ -108,10 +104,6 @@ if [ ! -f "$mapping_gtf" ]; then
 fi
 if [ ! -f "$gfold_gtf" ]; then
     echo "Error: File '$gfold_gtf' does not exist."
-    exit 1
-fi
-if [ ! -f "$RSeQC_bed" ]; then
-    echo "Error: File '$RSeQC_bed' does not exist."
     exit 1
 fi
 
@@ -147,8 +139,6 @@ fi
 get_time(){
     printf "%-19s" "`date +\"%Y-%m-%d %H:%M:%S\"`"
 }
-
-cp ${INPUT_DIRECTORY}/*.bam ${bam_path}
 
 echo "--------------------------------------------INITIALIZING----------------------------------------------" 
 echo "RNA-seq data analysis pipeline is now running..."
@@ -272,14 +262,16 @@ for FILE in $file_list_single; do
     R2_FILE_NAME=""
 
     # Check according fq file
-    if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
-        if [ -e "${FILE}.fastq.gz" ]; then
-            FILE_NAME="${FILE}.fastq.gz"
+    if [ -e "${FILE}_single.fastq.gz" ] || [ -e "${FILE}_single.fq.gz" ]; then
+        if [ -e "${FILE}_single.fastq.gz" ]; then
+            FILE_NAME="${FILE}_single.fastq.gz"
+            FILE_TYPE="fastq"
         else
-            FILE_NAME="${FILE}.fq.gz"
+            FILE_NAME="${FILE}_single.fq.gz"
+            FILE_TYPE="fq"
         fi
     else
-        echo "Error：Can not find ${SAMPLE_REFIX} sample fq fiile, skip"
+        echo "Error：Can not find ${SAMPLE_PREFIX} sample fq fiile, skip"
         continue
     fi
 
@@ -309,7 +301,7 @@ for FILE in $file_list_single; do
         echo "`get_time` samtools view ..."
         echo " "
         samtools view -@ ${THREAD} -bS ${bam_path}/${SAMPLE_PREFIX}.align.sam > ${bam_path}/${SAMPLE_PREFIX}.bam
-	    rm ${bam_path}/${SAMPLE_PREFIX}.align.sam
+	rm ${bam_path}/${SAMPLE_PREFIX}.align.sam
 
     else
         echo "Use available BAM: $BAM_FILE"
@@ -328,23 +320,21 @@ for FILE in $file_list; do
     echo " "
     echo "----------------------------Number ${counter} bam sample: ${SAMPLE_PREFIX}--------------------------"
     echo " "
-    # Check sort status
-    if ! samtools view -H "${bam_path}/${SAMPLE_PREFIX}.bam" | grep -q "SO:coordinate"; then
-        echo "Sort BAM..."
-        tmp_sorted=$(mktemp)
-        samtools sort -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
-        mv "$tmp_sorted" "${bam_path}/${SAMPLE_PREFIX}.bam"
-    fi
 
-    # Check index status
-    if [ ! -f "${bam_path}/${SAMPLE_PREFIX}.bam.bai" ]; then
-        echo "BAM index..."
-        samtools index -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam"
-    fi
+    # Sort and index
+    echo "Sort BAM..."
+    tmp_sorted=$(mktemp)
+    samtools sort -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
+    mv "$tmp_sorted" "${bam_path}/${SAMPLE_PREFIX}.bam"
+    echo "Index BAM..."
+    samtools index -@ $THREAD "${bam_path}/${SAMPLE_PREFIX}.bam"
     
+    # RSeQC
     echo "`get_time` RSeQC ..."
     echo " "
-    $python3_6 ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
+    if [ -z "$RSeQC_bed" ]; then
+    	$python3_6 ${SCRIPT_DIR}/read_distribution.py -i ${bam_path}/${SAMPLE_PREFIX}.bam -r ${RSeQC_bed} > ${QC_path}/${SAMPLE_PREFIX}_dirstribution.txt
+    fi	
 
     echo "Calculate gene expression levels"
     echo "`get_time` gfold count ..."

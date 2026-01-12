@@ -66,7 +66,7 @@ ggplot(strength)+
   geom_bar(aes(x=cell,y=strength,fill=cell),stat ="identity")+
   theme_linedraw(base_line_size = I(0))+scale_fill_manual(values = colo)+
   theme(text = element_text(size = 20),panel.grid.major = element_blank(),panel.grid.minor = element_blank(),legend.position = "none")+
-  ylab("Compartment strength")
+  ylab("Compartment strength")+xlab('Sample')
 while (!is.null(dev.list()))  dev.off()
 
 save_path <- file.path(path,'AB')

@@ -1,8 +1,8 @@
-# CDesk_env.yaml
 name: CDesk
 channels:
   - conda-forge
   - bioconda
+  - hcc
   - default
 dependencies:
   - python=3.6
@@ -15,7 +15,7 @@ dependencies:
   - fastqc=0.12.1
   - deeptools=3.3.2 
   # 新增工具
-  - bowtie2=2.5.1
+  - bowtie2
   - bedtools=2.31.0  # 提供bamToBed, genomeCoverageBed, intersectBed等
   - ucsc-bedgraphtobigwig=377
   - ucsc-bedsort=377
@@ -37,6 +37,7 @@ dependencies:
   - bcftools
   - cython
   - openjdk=21
+  - aspera-cli=3.7.7
   - pip:
     - multiqc
     - cstreet

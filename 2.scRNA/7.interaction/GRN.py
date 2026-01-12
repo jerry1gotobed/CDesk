@@ -777,7 +777,7 @@ def main():
     # 可视化参数
     parser.add_argument("--top_regulons", type=int, default=20, help="显示前N个调控子")
     parser.add_argument("--top_targets", type=int, default=20, help="每个转录因子显示前N个靶基因")
-    parser.add_argument("--plot_tf", default=None, help="为特定转录因子绘制网络图")
+    parser.add_argument("--plot_tf", default='None', help="为特定转录因子绘制网络图")
     
     args = parser.parse_args()
     from distutils.util import strtobool

@@ -82,7 +82,7 @@ if [ -z "$CONFIG" ]; then
 fi
 
 # Assign the reference data
-mapping_index=$(echo "$CONFIG" | jq -r '.mapping_index')
+mapping_index=$(echo "$CONFIG" | jq -r '.bowtie2_mapindex')
 species=$(echo "$CONFIG" | jq -r '.effective_genome_size')
 chromInfo=$(echo "$CONFIG" | jq -r '.chromInfo')
 promoter_file=$(echo "$CONFIG" | jq -r '.promoter_file')
@@ -115,6 +115,7 @@ qc_path="${OUTPUT_DIRECTORY}/QC"
 bed_path="${OUTPUT_DIRECTORY}/Bed"
 signal_path="${OUTPUT_DIRECTORY}/Signal"
 fastqc_path="${OUTPUT_DIRECTORY}/QC/fastqc"
+fragment_path="${OUTPUT_DIRECTORY}/QC/fragment"
 temp_path="${OUTPUT_DIRECTORY}/Temp"
 bam_path_single="${OUTPUT_DIRECTORY}/Bam/single"
 bam_path_paired="${OUTPUT_DIRECTORY}/Bam/pair"
@@ -151,6 +152,9 @@ if [ ! -d "${signal_path}" ]; then
 fi
 if [ ! -d "${fastqc_path}" ]; then
     mkdir -p ${fastqc_path}
+fi
+if [ ! -d "${fragment_path}" ]; then
+    mkdir -p ${fragment_path}
 fi
 if [ ! -d "${temp_path}" ]; then
     mkdir -p ${temp_path}
@@ -284,14 +288,16 @@ for FILE in $file_list_single; do
     R2_FILE_NAME=""
 
     # Check according fq file
-    if [ -e "${FILE}.fastq.gz" ] || [ -e "${FILE}.fq.gz" ]; then
-        if [ -e "${FILE}.fastq.gz" ]; then
-            FILE_NAME="${FILE}.fastq.gz"
+    if [ -e "${FILE}_single.fastq.gz" ] || [ -e "${FILE}_single.fq.gz" ]; then
+        if [ -e "${FILE}_single.fastq.gz" ]; then
+            FILE_NAME="${FILE}_single.fastq.gz"
+	    FILE_TYPE="fastq"
         else
-            FILE_NAME="${FILE}.fq.gz"
+            FILE_NAME="${FILE}_single.fq.gz"
+	    FILE_TYPE="fq"
         fi
     else
-        echo "Error：Can not find ${SAMPLE_REFIX} sample fq fiile, skip"
+        echo "Error：Can not find ${SAMPLE_PREFIX} sample fq fiile, skip"
         continue
     fi
 
@@ -340,19 +346,14 @@ for FILE in $file_list; do
     # sort bam
     echo "bam2sortbam `get_time` samtools sort ..."
     echo " "
-    # Check sort status
-    if ! samtools view -H "${bam_path_single}/${SAMPLE_PREFIX}.bam" | grep -q "SO:coordinate"; then
-        echo "Sort BAM..."
-        tmp_sorted=$(mktemp)
-        samtools sort -@ $THREAD "${bam_path_single}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
-        mv "$tmp_sorted" "${bam_path_single}/${SAMPLE_PREFIX}.bam"
-    fi
 
-    # Check index status
-    if [ ! -f "${bam_path_single}/${SAMPLE_PREFIX}.bam.bai" ]; then
-        echo "BAM index..."
-        samtools index -@ $THREAD "${bam_path_single}/${SAMPLE_PREFIX}.bam"
-    fi
+    # Sort and index
+    echo "Sort BAM..."
+    tmp_sorted=$(mktemp)
+    samtools sort -@ $THREAD "${bam_path_single}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
+    mv "$tmp_sorted" "${bam_path_single}/${SAMPLE_PREFIX}.bam"
+    echo "Index BAM..."
+    samtools index -@ $THREAD "${bam_path_single}/${SAMPLE_PREFIX}.bam"
 done
 
 # Paired
@@ -363,19 +364,14 @@ for FILE in $file_list; do
     # sort bam
     echo "bam2sortbam `get_time` samtools sort ..."
     echo " "
-    # Check sort status
-    if ! samtools view -H "${bam_path_paired}/${SAMPLE_PREFIX}.bam" | grep -q "SO:coordinate"; then
-        echo "Sort BAM..."
-        tmp_sorted=$(mktemp)
-        samtools sort -@ $THREAD "${bam_path_paired}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
-        mv "$tmp_sorted" "${bam_path_paired}/${SAMPLE_PREFIX}.bam"
-    fi
-
-    # Check index status
-    if [ ! -f "${bam_path_paired}/${SAMPLE_PREFIX}.bam.bai" ]; then
-        echo "BAM index..."
-        samtools index -@ $THREAD "${bam_path_paired}/${SAMPLE_PREFIX}.bam"
-    fi
+    
+    # Sort and index
+    echo "Sort BAM..."
+    tmp_sorted=$(mktemp)
+    samtools sort -@ $THREAD "${bam_path_paired}/${SAMPLE_PREFIX}.bam" -o "$tmp_sorted"
+    mv "$tmp_sorted" "${bam_path_paired}/${SAMPLE_PREFIX}.bam"
+    echo "Index BAM..."
+    samtools index -@ $THREAD "${bam_path_paired}/${SAMPLE_PREFIX}.bam"
 done
 
 if [ -f "$Group" ]; then
@@ -395,9 +391,9 @@ for FILE in $file_list; do
     # chromosome distribution
     echo "paired data `get_time` chromosome distribution ..."
     echo " "
-    samtools view -@ ${THREAD} ${bam_path_paired}/${SAMPLE_PREFIX}.bam | awk '/^[^#]/ {print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${qc_path}/${SAMPLE_PREFIX}.ChromosomeDistribution.txt
+    samtools view -@ ${THREAD} ${bam_path_paired}/${SAMPLE_PREFIX}.bam | awk '/^[^#]/ {print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${fragment_path}/${SAMPLE_PREFIX}.ChromosomeDistribution.txt
     # remove unsuccessful mapping and low quality reads
-    samtools view -@ ${THREAD} -f 0x2 ${bam_path_paired}/${SAMPLE_PREFIX}.bam | awk 'NR % 2 == 1{mapq=$5;forward=$0} NR % 2 == 0{if($5>=30 && mapq>=30 && substr($3,1,3)=="chr" && $3 !~ /_/) print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${qc_path}/${SAMPLE_PREFIX}.Filtered.ChromosomeDistribution.txt
+    samtools view -@ ${THREAD} -f 0x2 ${bam_path_paired}/${SAMPLE_PREFIX}.bam | awk 'NR % 2 == 1{mapq=$5;forward=$0} NR % 2 == 0{if($5>=30 && mapq>=30 && substr($3,1,3)=="chr" && $3 !~ /_/) print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${fragment_path}/${SAMPLE_PREFIX}.Filtered.ChromosomeDistribution.txt
 
     # filtering
     echo "paired data `get_time` filtering ..."
@@ -405,7 +401,7 @@ for FILE in $file_list; do
     samtools view -@ ${THREAD} -H ${bam_path_paired}/${SAMPLE_PREFIX}.bam > ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.sam
     samtools view -@ ${THREAD} -f 0x2 ${bam_path_paired}/${SAMPLE_PREFIX}.bam | awk 'NR % 2 == 1{mapq=$5;forward=$0} NR % 2 == 0{if($5>=30 && mapq>=30 && substr($3,1,3)=="chr" && $3!="chrM" && $3!="chrEBV" && $3 !~ /_/) print forward"\n"$0}' >> ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.sam
     samtools view -@ ${THREAD} -bS ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.sam > ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.bam
-	rm ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.sam
+    rm ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.sam
 
     # 2.BW ----------------------------------------------------------------------------------------
     echo " "
@@ -415,11 +411,11 @@ for FILE in $file_list; do
     echo "paired data `get_time` BigWig ..."
     echo " "
     bamToBed -i ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.bam > ${bed_path}/${SAMPLE_PREFIX}.RawReads.bed
-    samtools sort -n -@ 20 ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.bam > ${bam_path_paired}/${SAMPLE_PREFIX}.FilteredSorted.bam
+    samtools sort -n -@ ${THREAD} ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.bam > ${bam_path_paired}/${SAMPLE_PREFIX}.FilteredSorted.bam
     rm ${bam_path_paired}/${SAMPLE_PREFIX}.Filtered.bam
     bamToBed -bedpe -i ${bam_path_paired}/${SAMPLE_PREFIX}.FilteredSorted.bam 2>/dev/null | awk '$1==$4 && $2>0 && $5>0 {print $1"\t"$2"\t"$6}' | sort -k1,1 -k2,2n | uniq | grep -v WARNING > ${bed_path}/${SAMPLE_PREFIX}.Fragments.bed
-    awk '{print $3-$2}' ${bed_path}/${SAMPLE_PREFIX}.Fragments.bed | sort | uniq -c | sort -k2,2g | awk 'BEGIN{print "fragment_length\tnumber"} {print $2"\t"$1}' > ${qc_path}/${SAMPLE_PREFIX}.FragmentsLength.txt
-    Rscript ${SCRIPT_DIR}/FragmentLengthDistribution.R ${qc_path}/${SAMPLE_PREFIX}.FragmentsLength.txt ${qc_path}
+    awk '{print $3-$2}' ${bed_path}/${SAMPLE_PREFIX}.Fragments.bed | sort | uniq -c | sort -k2,2g | awk 'BEGIN{print "fragment_length\tnumber"} {print $2"\t"$1}' > ${fragment_path}/${SAMPLE_PREFIX}.FragmentsLength.txt
+    Rscript ${SCRIPT_DIR}/FragmentLengthDistribution.R ${fragment_path}/${SAMPLE_PREFIX}.FragmentsLength.txt ${fragment_path}
     bedSort ${bed_path}/${SAMPLE_PREFIX}.Fragments.bed ${bed_path}/${SAMPLE_PREFIX}.bed
     n=`wc -l ${bed_path}/${SAMPLE_PREFIX}.bed | cut -f 1 -d " "`
     c=`bc -l <<< "1000000 / $n"`
@@ -461,15 +457,15 @@ for FILE in $file_list; do
     # chromosome distribution
     echo "single data `get_time` chromosome distribution ..."
     echo " "
-    samtools view -@ ${THREAD} ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk '/^[^#]/ {print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${qc_path}/${SAMPLE_PREFIX}.ChromosomeDistribution.txt
+    samtools view -@ ${THREAD} ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk '/^[^#]/ {print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${fragment_path}/${SAMPLE_PREFIX}.ChromosomeDistribution.txt
     # remove duplicates and low quality reads
-    samtools view -@ ${THREAD} -F 0x400 ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk 'NR % 2 == 1{mapq=$5;forward=$0} NR % 2 == 0{if($5>=30 && mapq>=30 && substr($3,1,3)=="chr" && $3 !~ /_/) print $3}' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${qc_path}/${SAMPLE_PREFIX}.Filtered.ChromosomeDistribution.txt
+    samtools view -@ ${THREAD} ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk '$5 >= 30 && substr($3,1,3)=="chr" && $3!="chrM" && $3!="chrEBV" && $3 !~ /_/' | sort | uniq -c | sort -k1,1rg | awk 'BEGIN{print "chromosome\tnumber"} {print $2"\t"$1}' > ${fragment_path}/${SAMPLE_PREFIX}.Filtered.ChromosomeDistribution.txt
 
     # filtering
     echo "single data `get_time` filtering ..."
     echo " "
     samtools view -@ ${THREAD} -H ${bam_path_single}/${SAMPLE_PREFIX}.bam > ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.sam
-    samtools view -@ ${THREAD} -F 0x400 ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk 'NR % 2 == 1{mapq=$5;forward=$0} NR % 2 == 0{if($5>=30 && mapq>=30 && substr($3,1,3)=="chr" && $3!="chrM" && $3!="chrEBV" && $3 !~ /_/) print forward"\n"$0}' >> ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.sam
+    samtools view -@ ${THREAD} ${bam_path_single}/${SAMPLE_PREFIX}.bam | awk '$5 >= 30 && substr($3,1,3)=="chr" && $3!="chrM" && $3!="chrEBV" && $3 !~ /_/' >> ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.sam
     samtools view -@ ${THREAD} -bS ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.sam > ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.bam
     rm ${bam_path_single}/${SAMPLE_PREFIX}.Filtered.sam
 

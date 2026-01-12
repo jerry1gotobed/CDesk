@@ -10,32 +10,33 @@ sys_argv <- commandArgs(trailingOnly = TRUE)
 FileList= strsplit(sys_argv[1],',')[[1]]
 SampleName = strsplit(sys_argv[2],',')[[1]]
 outdir=sys_argv[3]
+resolution=as.numeric(sys_argv[4])
 # Optional parameters
-# 每一个数量级之间统计时划分的bin数量
-nBin=as.integer(sys_argv[4])
-# 绘制曲线时均值下界（不含）
-GlobalCurve.Mean=as.numeric(sys_argv[5])
-# 绘制曲线时bin索引数下界（不含），即前X个bin不要绘制
-GlobalCurve.Bin.Min=as.numeric(sys_argv[6])
-# 曲线图X轴截断值（含）
-GlobalCurve.X.min=as.numeric(sys_argv[7])
-GlobalCurve.X.max=as.numeric(sys_argv[8])
-# 绘制与【期望】曲线差异时的Y轴偏移量：
-ExpCurve.Y.bais=as.numeric(sys_argv[9])
-# 绘制与【期望】曲线差异时的X轴舍弃值（不含）：
-ExpCurve.X.min=as.numeric(sys_argv[10])# log(dis)> Curve.X.min ?
-ExpCurve.X.max=as.numeric(sys_argv[11])# log(dis)< Curve.X.max ?
-# 绘制与马赛克图的X轴范围（不含）：
-Masc.X.min=as.numeric(sys_argv[12])# Global.Obs2Exp$dis>4.8 
-Masc.X.max=as.numeric(sys_argv[13])# Global.Obs2Exp$dis<7.5
-width=as.numeric(sys_argv[14])
-height=as.numeric(sys_argv[15])
+# The number of bins divided per order of magnitude during statistics (每一个数量级之间统计时划分的bin数量)
+nBin=as.integer(sys_argv[5])
+# Lower bound of the mean when plotting the curve (exclusive) (绘制曲线时均值下界（不含))
+GlobalCurve.Mean=as.numeric(sys_argv[6])
+# Lower bound (exclusive) of bin index when plotting the curve, i.e., the first X bins are excluded from plotting (绘制曲线时bin索引数下界（不含），即前X个bin不要绘制)
+GlobalCurve.Bin.Min=as.numeric(sys_argv[7])
+# X-axis cutoff value (inclusive)(曲线图X轴截断值（含))
+GlobalCurve.X.min=as.numeric(sys_argv[8])
+GlobalCurve.X.max=as.numeric(sys_argv[9])
+# Y-axis offset when plotting deviation from the [expected] curve (绘制与【期望】曲线差异时的Y轴偏移量)
+ExpCurve.Y.bais=as.numeric(sys_argv[10])
+# X-axis discard value (exclusive) when plotting deviation from the [expected] curve (绘制与【期望】曲线差异时的X轴舍弃值（不含)）：
+ExpCurve.X.min=as.numeric(sys_argv[11])# log(dis)> Curve.X.min ?
+ExpCurve.X.max=as.numeric(sys_argv[12])# log(dis)< Curve.X.max ?
+# X-axis range for plotting against the mosaic plot (exclusive) (绘制与马赛克图的X轴范围（不含))
+Masc.X.min=as.numeric(sys_argv[13])# Global.Obs2Exp$dis>4.8 
+Masc.X.max=as.numeric(sys_argv[14])# Global.Obs2Exp$dis<7.5
+width=as.numeric(sys_argv[15])
+height=as.numeric(sys_argv[16])
 
 if (!dir.exists(outdir)) {
-  dir.create(outdir, recursive = TRUE)  # 这将创建所有必要的父目录
+  dir.create(outdir, recursive = TRUE) 
 }
 
-ProbStat<-function(tmp){# 两列的dataframe，第一列为距离(bin)，第二列为count
+ProbStat<-function(tmp){# 2 column dataframe: bin,contact
   tmp=data.frame(dis=tmp$V1, count=tmp$V2)
   tmp=as.data.frame(tapply(tmp$count, tmp$dis, sum))
   colnames(tmp)="sum"
@@ -55,12 +56,13 @@ for(ii in 1:length(SampleName)){
   OriDataList[[ii]]=as.data.frame(
     data.table::fread(FileList[ii],sep="\t"))[,c('dist','contact')]
   colnames(OriDataList[[ii]])= c('V1','V2')
+  OriDataList[[ii]] = OriDataList[[ii]][OriDataList[[ii]]$V1%%resolution==0,]
   NorDataList[[ii]]=ProbStat(OriDataList[[ii]])
   GlobalData=rbind.data.frame(GlobalData,
                               data.frame(NorDataList[[ii]],sample=SampleName[ii]))
 }
 
-# 1. 统计线图：距离取log10 → 线性区间平均
+# Binned line plot: distance transformed with log10, then averaged in linear space(1. 统计线图：距离取log10 → 线性区间平均)
 Global.LogBin=GlobalData
 Global.LogBin$dis=log10(Global.LogBin$dis+1)
 Global.LogBin$bin=round(Global.LogBin$dis*nBin)
@@ -81,23 +83,22 @@ ggplot(data=
   xlim(GlobalCurve.X.min,GlobalCurve.X.max)
 while (!is.null(dev.list()))  dev.off()
 
-# 分布线图vs【标准】线图：
+# Distribution line plot vs [reference] line plot (分布线图vs【标准】线图)
 Global.Obs2Exp=GlobalData
 Global.Obs2Exp$dis[Global.Obs2Exp$dis==0] = 1
 Global.Obs2Exp$dis = log10(Global.Obs2Exp$dis)
 Global.Obs2Exp$sum = log10(Global.Obs2Exp$sum)+ExpCurve.Y.bais
 
-# 概率与【期望】概率的差值
+# Difference between observed probability and [expected] probability (概率与【期望】概率的差值)
 Global.Obs2Exp$AbsDiff=(abs(Global.Obs2Exp$sum)-abs(Global.Obs2Exp$dis))
 if(sum(Global.Obs2Exp$AbsDiff>0)>nrow(Global.Obs2Exp)*0.5){
   Global.Obs2Exp$AbsDiff=-Global.Obs2Exp$AbsDiff
 }
-# 概率相比【期望】概率偏差的占比
+# Proportion of deviation in probability relative to the [expected] probability(概率相比【期望】概率偏差的占比)
 Global.Obs2Exp$Deltas=(abs(Global.Obs2Exp$dis)/abs(Global.Obs2Exp$sum))
-# 删除X轴上较小的区域！！！！！！
+# Exclude small regions on the X-axis(删除X轴上较小的区域)
 Global.Obs2Exp=Global.Obs2Exp[Global.Obs2Exp$dis>GlobalCurve.Bin.Min,]
 
-# 输出前述的两个图：
 pdf(paste0(outdir,"/2.obs_to_exp_absdiff.pdf"),width = width,height = height)
 ggplot(Global.Obs2Exp[
   (Global.Obs2Exp$dis>ExpCurve.X.min)&

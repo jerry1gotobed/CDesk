@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+ulimit -c unlimited
+
 # Parameters initialize
 VCF=""
 MAT=""

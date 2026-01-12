@@ -51,18 +51,43 @@ def cellranger(args):
         source_file = os.path.abspath(row['fq1'])
         symlink_name = f"{row['sample']}_S1_L001_R1_001.fastq.gz"
         target_file = os.path.join(f'{args.o}/cellranger/input', symlink_name)
+        if os.path.exists(target_file):
+            os.remove(target_file)
         os.symlink(source_file, target_file)
         # fq2
         source_file = os.path.abspath(row['fq2'])
         symlink_name = f"{row['sample']}_S1_L001_R2_001.fastq.gz"
         target_file = os.path.join(f'{args.o}/cellranger/input', symlink_name)
+        if os.path.exists(target_file):
+            os.remove(target_file)
         os.symlink(source_file, target_file)
 
     # Run cellranger
     for sample in list(test['sample']):
-        cmd = [config['software']['cellranger'],"count",f"--id={sample}",f"--fastqs={args.o}/cellranger/input",f"--sample={sample}",f"--transcriptome={config['data'][args.s]['scRef10x']}","--localcores",str(args.t)]
-        subprocess.run(cmd, check=True)
-        os.system(f'mv {sample} {args.o}/cellranger')
+        print(f'Process sample {sample}')
+        cmd = [config['software']['cellranger'],"count",f"--id={sample}",f"--fastqs={args.o}/cellranger/input",f"--sample={sample}",f"--transcriptome={config['data'][args.s]['scRef10x']}","--localcores",str(args.t),"--create-bam","false"]
+        if args.chemistry != 'auto':
+            cmd = cmd + ['--chemistry',args.chemistry]
+        result = subprocess.run(
+                    cmd,
+                    cwd = f'{args.o}/cellranger',
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding='utf-8'
+                )
+        
+        output_file = f'{args.o}/cellranger/{sample}_proprocess.log'
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write("stdout:\n")
+            f.write(result.stdout)
+            f.write("\nstderr:\n")
+            f.write(result.stderr)
+
+        if result.returncode == 0:
+            print(f"✅ Sample {sample} process successfully")
+        else:
+            print(f"❌ Error processing sample {sample}: {result.returncode}")
 
 def drseq(args):
     input_file = args.i
@@ -102,10 +127,28 @@ def drseq(args):
     os.path.abspath(row['fq2'])  
     # Run Drseq
     for idx, row in test.iterrows():
+        print(f'Process sample {row["sample"]}')
         cmd = [config['software']['DrSeq'],"simple","-b",os.path.abspath(row['fq1']),"-r",os.path.abspath(row['fq2']),"-n",row["sample"],"-g",config['data'][args.s]['refgenes'],"--maptool", "bowtie2","--mapindex", config['data'][args.s]['bowtie2_mapindex'],"--thread", str(args.t),"-f","--clean"]
-        subprocess.run(cmd, check=True)
-        os.system(f'mv {sample} {args.o}/DrSeq')
-        os.system(f'mv {sample}.conf {args.o}/DrSeq')
+        result = subprocess.run(
+                    cmd,
+                    cwd = f'{args.o}/DrSeq',
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding='utf-8'
+                )
+        
+        output_file = f'{args.o}/DrSeq/{sample}_proprocess.log'
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write("stdout:\n")
+            f.write(result.stdout)
+            f.write("\nstderr:\n")
+            f.write(result.stderr)
+
+        if result.returncode == 0:
+            print(f"✅ Sample {row['sample']} process successfully")
+        else:
+            print(f"❌ Error processing sample {row['sample']}: {result.returncode}")
 
 def singleron(args):
     input_file = args.i
@@ -148,11 +191,15 @@ def singleron(args):
         source_file = os.path.abspath(row['fq1'])
         symlink_name = f"{row['sample']}_1.fq.gz"
         target_file = os.path.join(f'{args.o}/singleron/data',symlink_name)
+        if os.path.exists(target_file):
+            os.remove(target_file)
         os.symlink(source_file, target_file)
         # fq2
         source_file = os.path.abspath(row['fq2'])
         symlink_name = f"{row['sample']}_2.fq.gz"
         target_file = os.path.join(f'{args.o}/singleron/data',symlink_name)
+        if os.path.exists(target_file):
+            os.remove(target_file)
         os.symlink(source_file, target_file)
 
     filename = f'{args.o}/singleron/rna.mapfile'
@@ -160,24 +207,37 @@ def singleron(args):
         lines = [f'{x}\t{args.o}/singleron/data\t{x}' for x in list(test['sample'])]
         f.write('\n'.join(lines))
 
+    if os.path.exists(os.path.join(args.o,'singleron','shell')):
+        shutil.rmtree(os.path.join(args.o,'singleron','shell'))
+
     # Run celescope
-    cmd = [config['software']['celescope_conda']+'/bin/multi_rna', '--mapfile', f"{args.o}/singleron/rna.mapfile",
+    cmd = [os.path.join(config['software']['celescope_path'],'multi_rna'), '--mapfile', f"{args.o}/singleron/rna.mapfile",
        '--genomeDir', config['data'][args.s]['singleron_mapindex'],
        '--thread', str(args.t),
        '--mod', 'shell',
        '--limitBAMsortRAM','100000000000',
        '--outdir', f"{args.o}/singleron"]
-    subprocess.run(cmd, check=True)
-
-    if os.path.exists(os.path.join(args.o,'singleron','shell')):
-        shutil.rmtree(os.path.join(args.o,'singleron','shell'))
-
-    shutil.move("shell", os.path.join(args.o,'singleron'))
+    subprocess.run(cmd, check=True,cwd = os.path.join(args.o,'singleron'))
 
     for file_name in os.listdir(f'{args.o}/singleron/shell'):
-        os.environ['PATH'] = f"{os.path.join(config['software']['celescope_conda'],'bin')}:{os.environ['PATH']}"
+        sample = file_name.split('.')[0]
+        print(f'Process sample {sample}')
+
+        os.environ['PATH'] = f"{config['software']['celescope_path']}:{os.environ['PATH']}"
         cmd = ['bash', f"{args.o}/singleron/shell/{file_name}"]
-        subprocess.run(cmd, check=True)
+        result = subprocess.run(
+                    cmd,
+                    cwd=f"{args.o}/singleron",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding='utf-8'
+                )
+        
+        if result.returncode == 0:
+            print(f"✅ Sample {sample} process successfully")
+        else:
+            print(f"❌ Error processing sample {sample}: {result.returncode}")
 
 def dnbc(args):
     input_file = args.i
@@ -213,6 +273,8 @@ def dnbc(args):
     os.chdir(f'{args.o}/dnbc')
 
     for idx, row in test.iterrows():
+        print(f'Process sample {row["sample"]}')
+
         cmd = [
             config['software']['dnbc4tools'],'rna','run',
             '--name',row['sample'],
@@ -222,8 +284,26 @@ def dnbc(args):
             '--threads', str(args.t),
             '--outdir',f'{args.o}/dnbc'
         ]
-        subprocess.run(cmd, check=True)
 
+        result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding='utf-8'
+                )
+        
+        output_file = f'{args.o}/dnbc/{row["sample"]}_proprocess.log'
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write("stdout:\n")
+            f.write(result.stdout)
+            f.write("\nstderr:\n")
+            f.write(result.stderr)
+
+        if result.returncode == 0:
+            print(f"✅ Sample {row['sample']} process successfully")
+        else:
+            print(f"❌ Error processing sample {row['sample']}: {result.returncode}")
 
 def main():
     # CDesk ArgumentParser Object
@@ -236,6 +316,7 @@ def main():
     cellranger_parser.add_argument('-i', required=True, help='Specify the input fq information file')
     cellranger_parser.add_argument('-s', required=True, help='Specify the species')
     cellranger_parser.add_argument('-o', required=True, help='Output directory')
+    cellranger_parser.add_argument('--chemistry',type=str,default='auto',help='Chemistry')
     cellranger_parser.add_argument('-t', help='Specify number of threads (default is 8)',default=8,type=int)
 
     # DrSeq
@@ -244,6 +325,8 @@ def main():
     drseq_parser.add_argument('-s', required=True, help='Specify the species')
     drseq_parser.add_argument('-o', required=True, help='Specify the absolute directory of output file, the ending does not require a /')
     drseq_parser.add_argument('-t', help='Specify number of threads (default is 8)',default=8,type=int)
+    drseq_parser.add_argument('--barcode',help='The barcode range, default: 1:12',default='1:12')
+    drseq_parser.add_argument('--umi',help='The UMI range, deafult: 13:20',default='13:20')
 
     # singleron
     singleron_parser = subparsers.add_parser('singleron',help='singleron pipeline')
@@ -273,3 +356,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

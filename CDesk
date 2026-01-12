@@ -84,6 +84,14 @@ if extra_path:
 
 print('——————————————————————————————CDesk environment ready——————————————————————————————')
 
+# tools 1. Download
+def tools_download(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.key = args.key.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.key = args.key.rstrip('/')
+    bash_script = os.path.join(root_dir,'0.Tools','1.Download','Download_ERR_SRR.sh')
+    cmd = [bash_script,'-i',args.input,'-o',args.output,'-p',str(args.thread),'-k',args.key]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
 # bulkRNA 1. Preprocess
 def bulkRNA_preprocess(args): 
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
@@ -199,18 +207,20 @@ def bulkRNA_Clustering(args):
 
 # bulkRNA 7. AlternativeSplicingDetection
 def bulkRNA_AlternativeSpliceDetection(args):
-    args.output = args.output.rstrip('/');args.b1 = args.b1.rstrip('/');args.b2 = args.b2.rstrip('/')
-    args.output = os.path.abspath(args.output);args.b1 = os.path.abspath(args.b1);args.b2 = os.path.abspath(args.b2)
+    args.output = args.output.rstrip('/');args.b1 = args.b1.rstrip('/')
+    args.output = os.path.abspath(args.output);args.b1 = os.path.abspath(args.b1)
+    if args.b2 != 'No':
+        args.b2 = args.b2.rstrip('/');args.b2 = os.path.abspath(args.b2)
     if args.Splice_mode == 'detect':
         python_script = os.path.join(root_dir,'1.RNAseq','7.AlternativeSplicingDetection','alternative_splicing.py')
-        cmd = ["CDesk_env['python3_6']", python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
+        cmd = [CDesk_env['python3_6'], python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
                 "--type",args.type,"-t",str(args.thread),'--length',str(args.length),
                 '--variable_read_length',str(args.variable_read_length),'--allow_clipping',str(args.allow_clipping)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.Splice_mode == 'draw':
         python_script = os.path.join(root_dir,'1.RNAseq','7.AlternativeSplicingDetection','draw_sashimiplot.py')
         cmd = [CDesk_env['python3_7'], python_script,'--b1',args.b1,'--b2',args.b2,'-s',args.species,'-o',args.output,
-                "--region",args.region,"--group",args.group,
+                "--region",args.region,"--group",args.group,'--l1',args.l1,'--l2',args.l2,
                 '--exon_s',str(args.exon_s),'--intron_s',str(args.intron_s)]
         subprocess.run(cmd,check=True,env=CDesk_env)
 
@@ -222,7 +232,12 @@ def scRNA_preprocess(args):
     python_script = os.path.join(root_dir,'2.scRNA','1.preprocess','preprocess.py')    
     if args.scRNA_preprocess_mode != 'smartseq':
         cmd = [CDesk_env['python3_7'], python_script,args.scRNA_preprocess_mode,'-i',args.input,'-o',args.output,'-s',args.species,'-t',str(args.thread)]
+        if args.scRNA_preprocess_mode == 'cellranger':
+            cmd += ['--chemistry',args.chemistry]
+        if args.scRNA_preprocess_mode == 'drseq':
+            cmd += ['--umi',args.umi,'--barcode',args.barcode]
         subprocess.run(cmd,check=True,env=CDesk_env)
+
     elif args.scRNA_preprocess_mode == 'smartseq':
         python_script = os.path.join(root_dir,'1.RNAseq','1.Preprocess','data.py')
         cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
@@ -319,54 +334,72 @@ def scRNA_marker(args):
 # scRNA: 5. trajectory
 def scRNA_trajectory(args):
     if args.scRNA_trajectory_mode == 'monocle':
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
         R_script = os.path.join(root_dir,'2.scRNA','5.trajectory','monocle3.R')
-        cmd = ['Rscript',R_script,args.i,args.o,args.m,args.s,str(args.width),str(args.height)]
+        cmd = ['Rscript',R_script,args.input,args.output,args.meta,args.start,str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_trajectory_mode == 'diffusion':
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
         R_script = os.path.join(root_dir,'2.scRNA','5.trajectory','diffusionmap.R')
-        cmd = ['Rscript',R_script,args.i,args.o,args.m,args.s,str(args.width),str(args.height)]
+        cmd = ['Rscript',R_script,args.input,args.output,args.meta,args.start,str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_trajectory_mode == 'velocity':
+        args.cellranger = args.cellranger.rstrip('/');args.output = args.output.rstrip('/');args.rds = args.rds.rstrip('/');args.genes = args.genes.rstrip('/')
+        args.cellranger = os.path.abspath(args.cellranger);args.output = os.path.abspath(args.output);args.rds = os.path.abspath(args.rds);args.genes = os.path.abspath(args.genes) 
         python_script = os.path.join(root_dir,'2.scRNA','5.trajectory','velocity.py')
         cmd = [CDesk_env['python3_7'],python_script,'--cellranger_output',args.cellranger,
-               '--rds_file',args.rds,'--gtf',args.gtf,'--genes',args.genes,'-o',args.o,
-               '--meta',args.meta,'--width',str(args.width),'--height',str(args.height),'-t',str(args.t)]
+               '--rds_file',args.rds,'--gtf',args.gtf,'--genes',args.genes,'-o',args.output,
+               '--meta',args.meta,'--width',str(args.width),'--height',str(args.height),'-t',str(args.thread)]
         subprocess.run(cmd, check=True,env=CDesk_env)
         figures_dir = os.path.join(os.getcwd(),'figures')
         if os.path.exists(figures_dir) and os.path.isdir(figures_dir):
             shutil.rmtree(figures_dir)
     elif args.scRNA_trajectory_mode == 'cstreet':
+        args.expression = args.expression.rstrip('/');args.output = args.output.rstrip('/');args.state = args.state.rstrip('/')
+        args.expression = os.path.abspath(args.expression);args.output = os.path.abspath(args.output);args.state = os.path.abspath(args.state)
         python_script = os.path.join(root_dir,'2.scRNA','5.trajectory','cstreet.py')
-        cmd = [CDesk_env['python3_7'],python_script,'-i',args.i,'-s',args.s,'-n',args.n,'-o',args.o]
+        cmd = [CDesk_env['python3_7'],python_script,'-i',args.expression,'-s',args.state,'-n',args.name,'-o',args.output]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 6. similarity
 def scRNA_similarity(args):
+    args.output = args.output.rstrip('/');args.sample1 = args.sample1.rstrip('/');args.sample2 = args.sample2.rstrip('/');args.type1 = args.type1.rstrip('/');args.type2 = args.type2.rstrip('/')
+    args.output = os.path.abspath(args.output);args.sample1 = os.path.abspath(args.sample1);args.sample2 = os.path.abspath(args.sample2);args.type1 = os.path.abspath(args.type1);args.type2 = os.path.abspath(args.type2)
     R_script = os.path.join(root_dir,'2.scRNA','6.similarity','correlation.R')
-    cmd = ['Rscript',R_script,args.sample1,args.sample2,args.meta1,args.meta2,args.type1,args.type2,args.o,str(args.nfeatures_used),str(args.integrate_features),str(args.width),str(args.height)]
+    cmd = ['Rscript',R_script,args.sample1,args.sample2,args.meta1,args.meta2,args.type1,args.type2,args.output,str(args.nfeatures_used),str(args.integrate_features),str(args.width),str(args.height)]
     subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 7. interaction
 def scRNA_interaction(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     if args.scRNA_interaction_mode == 'cellchat':
         R_script = os.path.join(root_dir,'2.scRNA','7.interaction','cellchat.R')
-        cmd = ['Rscript',R_script,'--seurat_file',args.i,"--output_directory",args.o,"--threads",str(args.t),"--species",args.species,"--group_by",args.group,"--width",str(args.width),"--height",str(args.height)]
+        cmd = ['Rscript',R_script,'--seurat_file',args.input,"--output_directory",args.output,"--threads",str(args.thread),"--species",args.species,"--group_by",args.group,"--width",str(args.width),"--height",str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_interaction_mode == 'pyscenic':
+        args.tf = args.tf.rstrip('/');args.db = args.db.rstrip('/')
+        args.tf = os.path.abspath(args.tf);args.db = os.path.abspath(args.db)
         python_script = os.path.join(root_dir,'2.scRNA','7.interaction','GRN.py')
-        cmd = [CDesk_env['python3_7'],python_script,'-i',args.i,'-o',args.o,"--tf-list",args.tf,"--db-folder",args.db,"--species",args.species,"--num-workers",str(args.t),"--auc-threshold",str(args.auc),"--nes-threshold",str(args.nes),'--normalize',str(args.normalize),'--scale',str(args.scale),'--log',str(args.log),'--top_regulons',str(args.top_regulons),'--top_targets',str(args.top_targets),'--plot_tf',str(args.plot_tf)]
+        cmd = [CDesk_env['python3_7'],python_script,'-i',args.input,'-o',args.output,"--tf-list",args.tf,"--db-folder",args.db,"--species",args.species,"--num-workers",str(args.thread),"--auc-threshold",str(args.auc),"--nes-threshold",str(args.nes),'--normalize',str(args.normalize),'--scale',str(args.scale),'--log',str(args.log),'--top_regulons',str(args.top_regulons),'--top_targets',str(args.top_targets),'--plot_tf',str(args.plot_tf)]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
 # scRNA: 8. integrate
 def scRNA_integrate(args):
     if args.scRNA_integrate_mode == 'seurat':
+        args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+        args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
         R_script = os.path.join(root_dir,'2.scRNA','8.integrate','integrate.R')
-        cmd = ['Rscript',R_script,args.i,args.mode,args.o,str(args.min_cells),str(args.min_features),str(args.nfeatures_used),
+        cmd = ['Rscript',R_script,args.input,args.mode,args.output,str(args.min_cells),str(args.min_features),str(args.nfeatures_used),
                str(args.integrate_features),str(args.pc_num),str(args.pc_reduce),str(args.max_iter_harmony),str(args.k_anchor),str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
     elif args.scRNA_integrate_mode == 'bulk':
+        args.meta = args.meta.rstrip('/');args.output = args.output.rstrip('/');args.bulk = args.bulk.rstrip('/');args.scRNA = args.scRNA.rstrip('/')
+        args.meta = os.path.abspath(args.meta);args.output = os.path.abspath(args.output);args.bulk = os.path.abspath(args.bulk);args.scRNA = os.path.abspath(args.scRNA)
         R_script = os.path.join(root_dir,'2.scRNA','8.integrate','bulk+scRNA.R')
-        cmd = ['Rscript',R_script,args.bulk,args.scRNA,args.meta,args.o,str(args.nfeatures_used),
+        cmd = ['Rscript',R_script,args.bulk,args.scRNA,args.meta,args.output,str(args.nfeatures_used),
                str(args.integrate_features),str(args.pc_num),str(args.pc_reduce),str(args.width),str(args.height)]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
@@ -476,6 +509,29 @@ def ATAC_correlation(args):
             args.output,str(args.thread)]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
+# ChIPseq&CUTTag: 1. Preprocess
+def ChIPseq_CUTTag_preprocess(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+
+    python_script = os.path.join(root_dir,'4.ChIPseqCUTTag','1.preprocess','data.py')
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
+    bash_script = os.path.join(root_dir,'4.ChIPseqCUTTag','1.preprocess','ChIPseqCUTTagData.sh')
+    cmd = [bash_script,'-i',os.path.join(args.output,'data'),'-o',args.output,'-s',args.species,'-p',str(args.thread),'-g',args.input]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
+# ChIPseq&CUTTag: 3. Pattern
+def ChIPseq_CUTTag_pattern(args):
+    python_script = os.path.join(root_dir,'4.ChIPseqCUTTag','3.pattern','pattern.py')
+    args.bw = args.bw.rstrip('/');args.output = args.output.rstrip('/');args.bed=args.bed.rstrip('/')
+    args.bw = os.path.abspath(args.bw);args.output = os.path.abspath(args.output);args.bed=os.path.abspath(args.bed)
+    cmd = [CDesk_env['python3_6'], python_script,'-bw',args.bw,'-bed',args.bed,'-o',args.output,
+           '--mode',args.mode,'--region',args.region,
+            '--height',str(args.height),'-a',str(args.upstream),'-b',str(args.downstream),'-m',str(args.length)]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
 # HiC: 1. preprocess
 def HiC_preprocess(args):
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
@@ -575,6 +631,18 @@ def parse_arguments():
     # CDesk ArgumentParser Object
     parser = argparse.ArgumentParser(prog='CDesk', description="CDesk multiomics pipeline")
     subparsers = parser.add_subparsers(dest='omics', required=True, help="Choose an omic to run the script")
+
+    # tools
+    tools_parser = subparsers.add_parser('tools', help='Some other tools')
+    tools_subparsers = tools_parser.add_subparsers(help='Some other tools', title='tools', dest='tools_command')
+
+    # tools: 1. download
+    download_parser = tools_subparsers.add_parser('download', help='Download SRR/ERR data')
+    # Required parameters
+    download_parser.add_argument('--input','-i', required=True, help='The input sample list file')
+    download_parser.add_argument('--output','-o', required=True, help='Specify the output directory')
+    download_parser.add_argument('--key','-k', required=True, help='Specify the ASCP Key Path')
+    download_parser.add_argument('--thread','-t', default=5,type=int,help='Specify the number of threads, default: 5')
 
     # bulkRNA
     bulkRNA_parser = subparsers.add_parser('bulkRNA', help='bulkRNA-seq pipeline')
@@ -709,11 +777,11 @@ def parse_arguments():
     bulkSplice_subparser = bulkSplice_parser.add_subparsers(dest='Splice_mode', required=True, help="Choose a mode to run the script")
     # Splice detect
     bulkSplice_detect = bulkSplice_subparser.add_parser('detect', help='Detect the differentail splicing events by rMATs based on the bam file')
-    bulkSplice_detect.add_argument('--b1',type=str,required=True,help="The first txt file containing BAM file paths seprated by comma")
-    bulkSplice_detect.add_argument('--b2',type=str,required=True,help="The second txt file containing BAM file paths seprated by comma")
+    bulkSplice_detect.add_argument('--b1',type=str,required=True,help="The first BAM files txt")
     bulkSplice_detect.add_argument('-s','--species',type=str,required=True,choices=list(config['data'].keys()),help="Specify the species")
     bulkSplice_detect.add_argument('-o','--output',type=str,required=True,help="The output directory")
     # Optional
+    bulkSplice_detect.add_argument('--b2',type=str,default='No',help="The second BAM files txt")
     bulkSplice_detect.add_argument('--type',choices=['paired','single'],default='paired',help="Type of read: paired/single, default:paired")
     bulkSplice_detect.add_argument('-t','--thread', type=int, default=10, help="Number of threads, default: 10")
     bulkSplice_detect.add_argument('--length',type=int,default=150,help="The length of each read, default: 150")
@@ -721,13 +789,15 @@ def parse_arguments():
     bulkSplice_detect.add_argument('--allow_clipping',action='store_true',help="Allow alignments with soft or hard clipping to be used")
     # Splice draw
     bulkSplice_draw = bulkSplice_subparser.add_parser('draw', help='Draw the sashimi plot to visualize the differential splicing events based on the bam files')
-    bulkSplice_draw.add_argument('--b1',type=str,required=True,help="The first txt file containing BAM file paths seprated by comma")
-    bulkSplice_draw.add_argument('--b2',type=str,required=True,help="The second txt file containing BAM file paths seprated by comma")
+    bulkSplice_draw.add_argument('--b1',type=str,required=True,help="The first BAM files txt")
     bulkSplice_draw.add_argument('-s','--species',type=str,required=True,help="Specify the species")
     bulkSplice_draw.add_argument('-o','--output',type=str,required=True,help="The output directory")
     bulkSplice_draw.add_argument('--region',type=str,required=True,help="The genome region coordinates: format:{chromosome}:{strand}:{start}:{end}")
-    bulkSplice_draw.add_argument('--group',type=str,required=True,help="The path to a .gf file which groups the replicates")
     # Optional
+    bulkSplice_draw.add_argument('--l1',type=str,help="The first sample name",default = 'sample1')
+    bulkSplice_draw.add_argument('--l2',type=str,help="The second sample name",default = 'sample2')
+    bulkSplice_draw.add_argument('--group',type=str,default='No',help="The path to a .gf file which groups the replicates")
+    bulkSplice_draw.add_argument('--b2',type=str,default='No',help="The second BAM files txt")
     bulkSplice_draw.add_argument('--exon_s',type=int, default=1,help="How much to scale down exon, default: 1")
     bulkSplice_draw.add_argument('--intron_s',type=int, default=1,help="How much to scale down introns, default: 1")
  
@@ -744,12 +814,15 @@ def parse_arguments():
     scRNApreprocess_cellranger.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
     scRNApreprocess_cellranger.add_argument('--output','-o', required=True, help='Output directory')
     scRNApreprocess_cellranger.add_argument('--thread','-t',help='Specify number of threads (default is 8)',default=8,type=int)
+    scRNApreprocess_cellranger.add_argument('--chemistry',type=str,default='auto',help='Chemistry')
     # DrSeq
     scRNApreprocess_drseq = scRNApreprocess_subparser.add_parser('drseq',help='Perform DrSeq preprocess')
     scRNApreprocess_drseq.add_argument('--input','-i', required=True, help='Input fq information file')
     scRNApreprocess_drseq.add_argument('--species','-s', required=True, help='Specify the species',choices=list(config['data'].keys()))
     scRNApreprocess_drseq.add_argument('--output','-o', required=True, help='Output directory')
     scRNApreprocess_drseq.add_argument('--thread','-t',help='Specify number of threads (default is 8)',default=8,type=int)
+    scRNApreprocess_drseq.add_argument('--barcode',help='The barcode range, default: 1:12',default='1:12')
+    scRNApreprocess_drseq.add_argument('--umi',help='The UMI range, deafult: 13:20',default='13:20')
     # smartseq
     scRNApreprocess_smartseq = scRNApreprocess_subparser.add_parser('smartseq',help='Perform smartseq preprocess')
     scRNApreprocess_smartseq.add_argument('--input','-i', required=True, help='Input fq information file')
@@ -846,37 +919,37 @@ def parse_arguments():
     scRNAtrajecory_subparser = scRNAtrajectory_parser.add_subparsers(dest='scRNA_trajectory_mode',required=True,help='Choose a mode')
     # monocle3
     scRNAtrajecory_monocle = scRNAtrajecory_subparser.add_parser('monocle',help='Perform monocle trajectory analysis')
-    scRNAtrajecory_monocle.add_argument('-i', required=True, help='Input rds file, clustered and annotated seurat object')
-    scRNAtrajecory_monocle.add_argument('-m', required=True, help='Meta data for trajectory analysis, e.g., celltype')
-    scRNAtrajecory_monocle.add_argument('-o', required=True, help='Output directory for the results')
-    scRNAtrajecory_monocle.add_argument('-s', required=True, help='Start point for trajectory analysis, e.g., NK')
+    scRNAtrajecory_monocle.add_argument('--input','-i', required=True, help='Input rds file, clustered and annotated seurat object')
+    scRNAtrajecory_monocle.add_argument('--meta','-m', required=True, help='Meta data for trajectory analysis, e.g., celltype')
+    scRNAtrajecory_monocle.add_argument('--output','-o', required=True, help='Output directory for the results')
+    scRNAtrajecory_monocle.add_argument('--start', required=True, help='Start point for trajectory analysis, e.g., NK')
     scRNAtrajecory_monocle.add_argument("--width", type=int, default=8,help="Plot width, default: 8")
     scRNAtrajecory_monocle.add_argument("--height", type=int, default=8,help="Plot height, default: 8")
     # DiffusionMap
     scRNAtrajecory_diffusionmap = scRNAtrajecory_subparser.add_parser('diffusion',help='Perform diffusion map trajectory analysis')
-    scRNAtrajecory_diffusionmap.add_argument('-i', required=True, help='Input rds file, clustered and annotated seurat object')
-    scRNAtrajecory_diffusionmap.add_argument('-o', required=True, help='Output directory for the results')
-    scRNAtrajecory_diffusionmap.add_argument('-m', required=True, help='Meta data for trajectory analysis, e.g., celltype')
-    scRNAtrajecory_diffusionmap.add_argument('-s', required=True, help='Start point for trajectory analysis, e.g., NK')
+    scRNAtrajecory_diffusionmap.add_argument('--input','-i', required=True, help='Input rds file, clustered and annotated seurat object')
+    scRNAtrajecory_diffusionmap.add_argument('--output','-o', required=True, help='Output directory for the results')
+    scRNAtrajecory_diffusionmap.add_argument('--meta','-m', required=True, help='Meta data for trajectory analysis, e.g., celltype')
+    scRNAtrajecory_diffusionmap.add_argument('--start',required=True, help='Start point for trajectory analysis, e.g., NK')
     scRNAtrajecory_diffusionmap.add_argument("--width", type=int, default=8,help="Plot width, default: 8")
     scRNAtrajecory_diffusionmap.add_argument("--height", type=int, default=8,help="Plot height, default: 8")
     # velocity
     scRNAtrajecory_velocity = scRNAtrajecory_subparser.add_parser('velocity',help='Perform velocity trajectory analysis')
     scRNAtrajecory_velocity.add_argument('--cellranger', required=True, help='Cellranger output directory')
-    scRNAtrajecory_velocity.add_argument('--gtf', default='', help='GTF file for velocity analysis')
+    scRNAtrajecory_velocity.add_argument('--gtf',default='',help='Specify the gtf file')
     scRNAtrajecory_velocity.add_argument('--rds', required=True, help='rds file, clustered and annotated seurat object for velocity analysis')
     scRNAtrajecory_velocity.add_argument('--genes', type=str,default='',help='Interested genes file')
-    scRNAtrajecory_velocity.add_argument("--meta",required=True, type=str, help="Meta column used")
+    scRNAtrajecory_velocity.add_argument("--meta",'-m',required=True, type=str, help="Meta column used")
     scRNAtrajecory_velocity.add_argument("--width", type=int, default=10,help="Plot width, default: 10")
     scRNAtrajecory_velocity.add_argument("--height", type=int, default=10,help="Plot height, default: 10")
-    scRNAtrajecory_velocity.add_argument('-o', required=True, help='Output directory for the results')
-    scRNAtrajecory_velocity.add_argument('-t', help='Specify number of threads (default is 10)',default=10,type=int)
+    scRNAtrajecory_velocity.add_argument('--output','-o', required=True, help='Output directory for the results')
+    scRNAtrajecory_velocity.add_argument('--thread','-t', help='Specify number of threads (default is 10)',default=10,type=int)
     # CStreet
     scRNAtrajecory_cstreet = scRNAtrajecory_subparser.add_parser('cstreet',help='Perform CStreet trajectory analysis')
-    scRNAtrajecory_cstreet.add_argument("-i", type=str, help="Input expression matrixes list file")
-    scRNAtrajecory_cstreet.add_argument("-s", type=str, help="Input cell state list file")
-    scRNAtrajecory_cstreet.add_argument("-n", type=str,default='',help="Output directory name")
-    scRNAtrajecory_cstreet.add_argument("-o", type=str, help="Output directory")
+    scRNAtrajecory_cstreet.add_argument("--expression", type=str, help="Input expression matrixes list file")
+    scRNAtrajecory_cstreet.add_argument("--state", type=str, help="Input cell state list file")
+    scRNAtrajecory_cstreet.add_argument("--name","-n", type=str,default='',help="Output directory name")
+    scRNAtrajecory_cstreet.add_argument("--output","-o", type=str, help="Output directory")
 
     # scRNA: 6. similarity
     scRNAsimilarity_parser = scRNA_subparser.add_parser('similarity', help='Test 2 scRNA data similarity')
@@ -884,9 +957,9 @@ def parse_arguments():
     scRNAsimilarity_parser.add_argument('--sample2',required=True, help='Seurat data 2')
     scRNAsimilarity_parser.add_argument('--meta1',required=True, help='Meta used in data 1')
     scRNAsimilarity_parser.add_argument('--meta2',required=True, help='Meta used in data 2')
-    scRNAsimilarity_parser.add_argument('--type1',required=True, help='Specified meta used in data 1')
-    scRNAsimilarity_parser.add_argument('--type2',required=True, help='Specified meta used in data 2')
-    scRNAsimilarity_parser.add_argument('-o',required=True, help='Output directory')
+    scRNAsimilarity_parser.add_argument('--type1',required=True, help='Data 1 group file')
+    scRNAsimilarity_parser.add_argument('--type2',required=True, help='Data 2 group file')
+    scRNAsimilarity_parser.add_argument('--output','-o',required=True, help='Output directory')
     scRNAsimilarity_parser.add_argument('--nfeatures_used', default=2000,type=int, help='The number of variable features, default: 2000')
     scRNAsimilarity_parser.add_argument('--integrate_features', default=2000,type=int, help='The number of features for integration, default: 2000')
     scRNAsimilarity_parser.add_argument('--width', default=10,type=int, help='Plot width, default: 10')
@@ -897,21 +970,21 @@ def parse_arguments():
     scRNAinteraction_subparser = scRNAinteraction_parser.add_subparsers(dest='scRNA_interaction_mode',required=True,help='Choose a mode')
     # cellchat
     scRNAinteraction_cellchat = scRNAinteraction_subparser.add_parser('cellchat',help='Perform cellchat analysis')
-    scRNAinteraction_cellchat.add_argument('-i', required=True, help='Input Seurat object rds file')
-    scRNAinteraction_cellchat.add_argument('-t', type=int,default=16, help='Number of threads, default: 16')
-    scRNAinteraction_cellchat.add_argument('-o', required=True, help='Output directory')
-    scRNAinteraction_cellchat.add_argument('--species', required=True, help='Species (human or mouse)',choices=["mouse","human"])
+    scRNAinteraction_cellchat.add_argument('--input','-i', required=True, help='Input Seurat object rds file')
+    scRNAinteraction_cellchat.add_argument('--thread','-t', type=int,default=16, help='Number of threads, default: 16')
+    scRNAinteraction_cellchat.add_argument('--output','-o', required=True, help='Output directory')
+    scRNAinteraction_cellchat.add_argument('--species','-s', required=True, help='Species (human or mouse)',choices=["mouse","human"])
     scRNAinteraction_cellchat.add_argument('--group', required=True, help="Grouping variable (seurat_clusters or celltype......)")
     scRNAinteraction_cellchat.add_argument("--width", type=int, default=8,help="Plot width, default: 8")
     scRNAinteraction_cellchat.add_argument("--height", type=int, default=8,help="Plot height, default: 8")
     # pyscenic
     scRNAinteraction_pyscenic = scRNAinteraction_subparser.add_parser('pyscenic',help='Perform pyscenic analysis')
-    scRNAinteraction_pyscenic.add_argument('-i', required=True, help='Input file, h5ad/csv/tsv format')
-    scRNAinteraction_pyscenic.add_argument('-o', required=True, help='Output directory')
+    scRNAinteraction_pyscenic.add_argument('--input','-i', required=True, help='Input file, h5ad/csv/tsv format')
+    scRNAinteraction_pyscenic.add_argument('--output','-o', required=True, help='Output directory')
     scRNAinteraction_pyscenic.add_argument('--tf', required=True, help='TF list file')
     scRNAinteraction_pyscenic.add_argument('--db', required=True, help='RcisTarget database directory')
-    scRNAinteraction_pyscenic.add_argument('--species', required=True, help='Species (human or mouse, hg/mm)')
-    scRNAinteraction_pyscenic.add_argument('-t', type=int,default=16, help='Number of threads, default: 16')
+    scRNAinteraction_pyscenic.add_argument('--species','-s', required=True, help='Species (human or mouse, hg/mm)')
+    scRNAinteraction_pyscenic.add_argument('--thread','-t', type=int,default=16, help='Number of threads, default: 16')
     scRNAinteraction_pyscenic.add_argument('--auc',type=float,default=0.05,help='AUC threshod')
     scRNAinteraction_pyscenic.add_argument('--nes',type=float,default=3.0,help='Normalized Enrichment Score threshod')
     scRNAinteraction_pyscenic.add_argument('--normalize',type=str,default='False',help='Normalize or not',choices=['True','False'])
@@ -919,16 +992,16 @@ def parse_arguments():
     scRNAinteraction_pyscenic.add_argument('--log',type=str,default='False',help='Log or not',choices=['True','False'])
     scRNAinteraction_pyscenic.add_argument("--top_regulons", type=int, default=20, help="Show top N regulons")
     scRNAinteraction_pyscenic.add_argument("--top_targets", type=int, default=20, help="Show top N targets genes for each TF")
-    scRNAinteraction_pyscenic.add_argument("--plot_tf", default=None, help="Draw network for specific TF")
+    scRNAinteraction_pyscenic.add_argument("--plot_tf", default='None', help="Specify TFs to draw network")
 
     # scRNA: 8. integrate
     scRNAintegrate_parser = scRNA_subparser.add_parser('integrate', help='scRNA data integration command')
     scRNAintegrate_subparser = scRNAintegrate_parser.add_subparsers(dest='scRNA_integrate_mode',required=True,help='Choose a mode(seurat,bulk)')
     # seurat
     scRNAintegrate_seurat = scRNAintegrate_subparser.add_parser('seurat',help='Perform multiple seurat data integration')
-    scRNAintegrate_seurat.add_argument('-i', required=True, help='Seurat data list file')
+    scRNAintegrate_seurat.add_argument('--input','-i', required=True, help='Seurat data list file')
     scRNAintegrate_seurat.add_argument('--mode', required=True, help='Choose a integration mode',choices=['merge','harmony','CCA'])
-    scRNAintegrate_seurat.add_argument('-o', required=True, help='Output directory')
+    scRNAintegrate_seurat.add_argument('--output','-o', required=True, help='Output directory')
     scRNAintegrate_seurat.add_argument('--min_cells', default=3,type=int, help='minimum cells threshold for data filtration preprocess, default: 3')
     scRNAintegrate_seurat.add_argument('--min_features', default=200,type=int, help='minimum feature threshold for data filtration preprocess, default: 200')
     scRNAintegrate_seurat.add_argument('--nfeatures_used', default=2000,type=int, help='The number of variable features, default: 2000')
@@ -943,8 +1016,8 @@ def parse_arguments():
     scRNAintegrate_bulk = scRNAintegrate_subparser.add_parser('bulk',help='Integrate seurate scRNA data and bulk data')
     scRNAintegrate_bulk.add_argument('--bulk', required=True, help='bulkRNA data list file')
     scRNAintegrate_bulk.add_argument('--scRNA', required=True, help='scRNA data list file')
-    scRNAintegrate_bulk.add_argument('--meta', required=True, help='The meta file')
-    scRNAintegrate_bulk.add_argument('-o', required=True, help='Output directory')
+    scRNAintegrate_bulk.add_argument('--meta','-m', required=True, help='The meta file')
+    scRNAintegrate_bulk.add_argument('--output','-o', required=True, help='Output directory')
     scRNAintegrate_bulk.add_argument('--nfeatures_used', default=2000,type=int, help='The number of variable features, default: 2000')
     scRNAintegrate_bulk.add_argument('--integrate_features', default=2000,type=int, help='The number of features for integration, default: 2000')
     scRNAintegrate_bulk.add_argument('--pc_num', default=50,type=int, help='PCA dimensional reduction dimensions, default: 50')
@@ -1044,6 +1117,104 @@ def parse_arguments():
     ATAC_correlation_parser.add_argument("-o","--output",required=True,help='Output directory')
     ATAC_correlation_parser.add_argument("-t","--thread",type=int,default=30,help='Number of threads')
     ATAC_correlation_parser.add_argument("--region",help='Optional BED file for specific regions') 
+
+    # ChIPseq&CUTTag
+    ChIPseq_CUTTag_parser = subparsers.add_parser('ChIPseqCUTTag', help='ChIPseq&CUTTag pipeline')
+    ChIPseq_CUTTag_subparsers = ChIPseq_CUTTag_parser.add_subparsers(help='ChIPseq&CUTTag pipeline', title='ChIPseq&CUTTag pipeline', dest='ChIPseq_CUTTag_command')
+
+    # ChIPseq&CUTTag: 1. Preprocess
+    ChIPseq_CUTTag_preprocess_parser = ChIPseq_CUTTag_subparsers.add_parser('preprocess', help='ChIPseq&CUTTag preprocess command')
+    ChIPseq_CUTTag_preprocess_parser.add_argument('-i','--input',required=True, help='Input fq information file')
+    ChIPseq_CUTTag_preprocess_parser.add_argument('-o','--output',required=True, help='Output directory')
+    ChIPseq_CUTTag_preprocess_parser.add_argument('-s','--species',required=True, help='Specify species',choices=list(config['data'].keys()))
+    ChIPseq_CUTTag_preprocess_parser.add_argument('-t','--thread',type=int,default=8, help='Number of threads, default: 8')
+
+    # ChIPseq_CUTTag: 2. QC
+    ChIPseq_CUTTag_QC_parser = ChIPseq_CUTTag_subparsers.add_parser('QC', help='ChIPseq_CUTTag replicate QC')
+    ChIPseq_CUTTag_QC_parser.add_argument("-i","--input",required=True, type=str, help="The input ChIPseq_CUTTag sample information file")
+    ChIPseq_CUTTag_QC_parser.add_argument("-s","--species", required=True,type=str, help="Species",choices=list(config['data'].keys()))
+    ChIPseq_CUTTag_QC_parser.add_argument("--bin", type=int,default=100000, help="Bin size for genomic binning, default: 100000")
+    ChIPseq_CUTTag_QC_parser.add_argument("--step", type=int,default=1, help="Peak file partition step, default: 1")
+    ChIPseq_CUTTag_QC_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
+    ChIPseq_CUTTag_QC_parser.add_argument("-t","--thread", type=int,default=30, help="Threads to run, default: 30")
+    ChIPseq_CUTTag_QC_parser.add_argument('--width',default=12,type=int, help='The plot width, default: 12')
+    ChIPseq_CUTTag_QC_parser.add_argument('--height',default=8,type=int, help='If plot height, default:8')
+
+    # ChIPseq&CUTTag: 3. Pattern
+    ChIPseq_CUTTag_pattern_parser = ChIPseq_CUTTag_subparsers.add_parser('pattern', help='ChIPseq&CUTTag preprocess command')
+    ChIPseq_CUTTag_pattern_parser.add_argument("-bw",required=True, type=str, help="The input bw files list file")
+    ChIPseq_CUTTag_pattern_parser.add_argument("-bed",required=True, type=str, help="The bed genomic regions to be analyzed list file")
+    ChIPseq_CUTTag_pattern_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
+    ChIPseq_CUTTag_pattern_parser.add_argument("--mode",default='reference-point',help="Analysis mode, default: reference-point",choices=["reference-point","scale-regions"])
+    ChIPseq_CUTTag_pattern_parser.add_argument("--height",help="Heatmap height, default: 10",type=int,default=10)
+    ChIPseq_CUTTag_pattern_parser.add_argument("-a","--upstream",help="Length to extend upstream of the genomic region start site (bp), default: 2000",type=int,default=2000)
+    ChIPseq_CUTTag_pattern_parser.add_argument("-b","--downstream",help="Length to extend downstream of the genomic region end site (bp), default: 2000",type=int,default=2000)
+    ChIPseq_CUTTag_pattern_parser.add_argument("-l","--length",help="Scaled genomic region length (bp), default: 3000",type=int,default=3000)
+    ChIPseq_CUTTag_pattern_parser.add_argument("-t","--thread",help="Number of processors, default: 10",type=int,default=10)
+    ChIPseq_CUTTag_pattern_parser.add_argument("--region",help="The reference point for reference-point, default: center",default='center',choices=['TSS','TES','center'])
+
+    # ChIPseq_CUTTag: 4. motif
+    ChIPseq_CUTTag_motif_parser = ChIPseq_CUTTag_subparsers.add_parser('motif', help='ChIPseq_CUTTag motif analysis')
+    ChIPseq_CUTTag_motif_subparser = ChIPseq_CUTTag_motif_parser.add_subparsers(dest='motif_mode', required=True, help="Choose to analyze or plot")
+    # homer find
+    ChIPseq_CUTTag_Find_homer_subparser = ChIPseq_CUTTag_motif_subparser.add_parser('homer', help='Perform homer motif finding analysis')
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("-i","--input",required=True,type=str, help="The input gene/peak information file")
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("-o","--output",required=True,  type=str, help="Output directory")
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("-s","--species",required=True, help='Available gene in HOMER or provide the path to genome FASTA files for peak mode', type=str)
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("--mode",required=True,type=str, help="Analysis mode: peak/gene",choices=['gene','peak'])
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("-t","--thread",default=20,  type=int, help="Number of threads, default: 20")
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("--start",default=-300,type=int, help="offset from TSS, default=-300")
+    ChIPseq_CUTTag_Find_homer_subparser.add_argument("--end",default=50,type=int, help="offset from TSS, default=50")
+    # meme find
+    ChIPseq_CUTTag_Find_meme_subparser = ChIPseq_CUTTag_motif_subparser.add_parser('meme', help='Perform meme motif finding analysis')
+    ChIPseq_CUTTag_Find_meme_subparser.add_argument("-i","--input",required=True,help="The fasta input information file")
+    ChIPseq_CUTTag_Find_meme_subparser.add_argument("-o","--output",required=True,  type=str, help="Output directory")
+    ChIPseq_CUTTag_Find_meme_subparser.add_argument("-t","--thread",default=10,  type=int, help="Number of threads, default: 10")
+    ChIPseq_CUTTag_Find_meme_subparser.add_argument("--nmotifs",default=3,  type=int, help="Number of motifs to extract, default: 3")
+    ChIPseq_CUTTag_Find_meme_subparser.add_argument("-db","--database",required=True,  type=str, help="Database file")
+    # homer heatmap
+    ChIPseq_CUTTag_homer_heatmap_subparser = ChIPseq_CUTTag_motif_subparser.add_parser('homer_heatmap', help='Plot the homer finding result heatmap')
+    ChIPseq_CUTTag_homer_heatmap_subparser.add_argument("-i","--input",required=True, type=str, help="The homer results information csv file")
+    ChIPseq_CUTTag_homer_heatmap_subparser.add_argument("-o","--output",required=True,type=str, help="The output directory")
+    ChIPseq_CUTTag_homer_heatmap_subparser.add_argument("--motif",default='no',type=str, help="The specified motifs txt file")
+    ChIPseq_CUTTag_homer_heatmap_subparser.add_argument("--width",default=10,type=float, help="The plot width, default: 10")
+    ChIPseq_CUTTag_homer_heatmap_subparser.add_argument("--height",default=8,type=float, help="The plot height, default: 8")
+    # enrich heatmap
+    ChIPseq_CUTTag_enrich_heatmap_subparser = ChIPseq_CUTTag_motif_subparser.add_parser('enrich_heatmap', help='Perform the motif enriched heatmap')
+    ChIPseq_CUTTag_enrich_heatmap_subparser.add_argument("--motif_bed",required=True, type=str, help="The motif bed file information csv file")
+    ChIPseq_CUTTag_enrich_heatmap_subparser.add_argument("--bed",required=True, type=str, help="The input bed file information csv file")
+    ChIPseq_CUTTag_enrich_heatmap_subparser.add_argument("-o","--output",required=True,type=str, help="The output directory")
+    ChIPseq_CUTTag_enrich_heatmap_subparser.add_argument("-t","--thread",default=12,type=int, help="The number of threads")
+    ChIPseq_CUTTag_enrich_heatmap_subparser.add_argument("-s","--species",required=True,type=str, help="Species")
+
+    # ChIPseq_CUTTag: 5. Accessbility
+    ChIPseq_CUTTag_accessbility_parser = ChIPseq_CUTTag_subparsers.add_parser('accessbility', help='ChIPseq_CUTTag accessbility analysis')
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--bw",required=True, help="The input bw txt file")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("-o","--output",required=True, help="Output directory")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--mode", required=True, choices=["region", "gene"], help="Analysis mode: region/gene")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("-i","--input", required=True, help="Input gene region or gene list txt file")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--species",help="Species",choices=list(config['data'].keys()))
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--method", choices=["sample", "region_list"], default="sample",help="Boxplot plotting method：sample/region list")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--center",required=True, help="Average profile alignment：region mode:peak/position，gene mode:TSS/TTS/whole")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--promoter_size", type=int, default=5000, help="Gene promoter region size, default: TSS upstream and downstream 5kb")
+    ChIPseq_CUTTag_accessbility_parser.add_argument("--region_list",default='',help="Region list file for box plot") 
+
+    # ChIPseq_CUTTag: 6. IGV snapshot
+    ChIPseq_CUTTag_igv_parser = ChIPseq_CUTTag_subparsers.add_parser('igv', help='ChIPseq_CUTTag IGV snapshot')
+    ChIPseq_CUTTag_igv_parser.add_argument("-i","--input",required=True, type=str, help="The input list file")
+    ChIPseq_CUTTag_igv_parser.add_argument("-o","--output",required=True,type=str, help="Output directory")
+    ChIPseq_CUTTag_igv_parser.add_argument("--genome", required=True, type=str, help="Select the genome id")
+    ChIPseq_CUTTag_igv_parser.add_argument("--display_mode",default='collapse',help="Display mode", choices=["collapse","expand","squish"])
+    ChIPseq_CUTTag_igv_parser.add_argument("--region",required=True,help="Specify the regions, separate by ,")
+    ChIPseq_CUTTag_igv_parser.add_argument("--type", default='png', type=str,choices=['svg','png'] ,help="svg or png output")
+
+    # ChIPseq_CUTTag: 7. Correlation
+    ChIPseq_CUTTag_correlation_parser = ChIPseq_CUTTag_subparsers.add_parser('correlation', help='ChIPseq_CUTTag correlation analysis')
+    ChIPseq_CUTTag_correlation_parser.add_argument("--bw1",required=True,help='Path to the first bw file')
+    ChIPseq_CUTTag_correlation_parser.add_argument("--bw2",required=True,help='Path to the second bw file')
+    ChIPseq_CUTTag_correlation_parser.add_argument("-o","--output",required=True,help='Output directory')
+    ChIPseq_CUTTag_correlation_parser.add_argument("-t","--thread",type=int,default=30,help='Number of threads')
+    ChIPseq_CUTTag_correlation_parser.add_argument("--region",help='Optional BED file for specific regions')
 
     # HiC
     HiC_parser = subparsers.add_parser('HiC', help='HiC pipeline')
@@ -1167,8 +1338,11 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-
-    if args.omics == 'bulkRNA':
+    
+    if args.omics == 'tools':
+        if args.tools_command == 'download':
+            tools_download(args)
+    elif args.omics == 'bulkRNA':
         if args.bulkRNA_command == 'preprocess':
             bulkRNA_preprocess(args)
         elif args.bulkRNA_command == 'correlation':
@@ -1183,7 +1357,7 @@ def main():
             bulkRNA_Clustering(args)
         elif args.bulkRNA_command == 'splice':
             bulkRNA_AlternativeSpliceDetection(args)
-    if args.omics == 'scRNA':
+    elif args.omics == 'scRNA':
         if args.scRNA_command == 'preprocess':
             scRNA_preprocess(args)
         elif args.scRNA_command == 'cluster':
@@ -1215,6 +1389,21 @@ def main():
             ATAC_correlation(args)
         elif args.ATAC_command == 'igv':
             ATAC_igv(args)
+    elif args.omics == 'ChIPseqCUTTag':
+        if args.ChIPseq_CUTTag_command == 'preprocess':
+            ChIPseq_CUTTag_preprocess(args)
+        elif args.ChIPseq_CUTTag_command == 'QC':
+            ATAC_QC(args)
+        elif args.ChIPseq_CUTTag_command == 'pattern':
+            ChIPseq_CUTTag_pattern(args)
+        elif args.ChIPseq_CUTTag_command == 'motif':
+            ATAC_motif(args)
+        elif args.ChIPseq_CUTTag_command == 'accessbility':
+            ATAC_accessbility(args)
+        elif args.ChIPseq_CUTTag_command == 'correlation':
+            ATAC_correlation(args)
+        elif args.ChIPseq_CUTTag_command == 'igv':
+            ATAC_igv(args)
     elif args.omics == 'HiC':
         if args.HiC_command == 'preprocess':
             HiC_preprocess(args)
@@ -1237,4 +1426,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

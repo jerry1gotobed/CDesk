@@ -8,8 +8,9 @@ import json
 import shutil
 from datetime import datetime
 
+config_path = os.environ.get('CDesk_config')
+
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 tools = ['fanc','hicConvertFormat','cooler','java','awk','sort']
@@ -30,7 +31,7 @@ def fanc_to_cools(fanC,outputFormat,output_directory,tmp_directory,thread,sample
     # cool -> mcool,h5
     if outputFormat== 'cool':
         src = os.path.join(tmp_directory, sample + ".cool")
-        dst = os.path.join(output_directory, os.path.basename(src))  # 保持文件名不变
+        dst = os.path.join(output_directory, os.path.basename(src)) 
         shutil.move(src, dst)
         return 'cool',os.path.join(output_directory, sample+".cool")
     if outputFormat== 'h5':
@@ -117,21 +118,17 @@ parser.add_argument('-r','--resolution', type=str, default='', help="Resolutions
 parser.add_argument('-n','--norm', type=str, default='None', help="Norm method",choices=['KR','ICE','VC','VC-SQRT','None'])
 parser.add_argument('--oe',type=str, default='',help="The resolution of O/E matrix to get")
 parser.add_argument('--sparse',type=str, default='',help="The resolution of sparse matrix to get")
-parser.add_argument('--config', default='',type=str,help="The configuration file")
 parser.add_argument('--species',type=str, default='',help="Set the species to transfer to juicer.hic")
 
 args = parser.parse_args()
 
 # pairs input needs fasta
 if args.inputFormat == 'pairs':
-    if args.config == '':
-        print('No configuration file set')
-        sys.exit(1)
     if args.species == '':
         print('No species set')
         sys.exit(1)
     try:
-        with open(args.config, 'r') as f:
+        with open(config_path,'r') as f:
             config = json.load(f)
         fasta = config['data'][args.species]['fasta']
     except Exception as e:
@@ -143,7 +140,7 @@ if args.outputFormat == 'juicerhic':
         print("Please set the species to transfer to juicer hic format")
         sys.exit(1)
     try:
-        with open(args.config, 'r') as f:
+        with open(config_path, 'r') as f:
             config = json.load(f)
         chrom_sizes = config['data'][args.species]['chromInfo']
         juicer_tools_jar = config['software']['juicer_tools_jar']
@@ -200,7 +197,7 @@ if inputFormat != 'pairs':
 
 def can_other_numbers_be_divided_by_min(nums):
     if not nums:
-        return False  # 空列表，无意义
+        return False  
     min_num = min(nums)
     for num in nums:
         if num != min_num and num % min_num != 0:
@@ -211,9 +208,6 @@ if args.resolution != '':
     resolutions = args.resolution
     resolution = [int(x) for x in resolutions.split(',')]
     resolution = sorted(resolution)
-    if not can_other_numbers_be_divided_by_min(resolution):
-        print(f'Can not transform the resolutions:{resolution}')
-        sys.exit(1)
     resolution_min = min(resolution)
 else:
     resolution = hic_resolution
@@ -231,6 +225,9 @@ if inputFormat == 'pairs':
     hic_resolution = [resolution_min]
 if min(hic_resolution) > resolution_min:
     print(f'Can not transfer to higher resolution {resolution_min}, highest available resolution: {min(hic_resolution)}')
+    sys.exit(1)
+if not can_other_numbers_be_divided_by_min(resolution+hic_resolution):
+    print(f'Can not transform the resolutions:{resolution}, the resolution can not be divisible by the highest resolution')
     sys.exit(1)
 highest_res = min(hic_resolution) 
 
@@ -327,13 +324,13 @@ if args.oe != '':
 if args.sparse != '':
     print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Extract sparse contact matrix")
     if outputFormat in ['mcool','juicerhic']:
-        command = ["fanc","dump","--only-intra",Output+'@'+str(sparse_res),os.path.join(output_directory,sample+"_sparse.txt")]
+        command = ["fanc","dump","--only-intra","-u",Output+'@'+str(sparse_res),os.path.join(output_directory,sample+"_sparse.txt")]
         try:
             subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             print(f"Error：{e.stderr.decode()}")
     else:
-        command = ["fanc","dump","--only-intra",Output,os.path.join(output_directory,sample+"_sparse.txt")]
+        command = ["fanc","dump","--only-intra","-u",Output,os.path.join(output_directory,sample+"_sparse.txt")]
         try:
             subprocess.run(command,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:

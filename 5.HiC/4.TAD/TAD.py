@@ -12,7 +12,6 @@ import argparse
 import shutil
 
 def is_tool_available(name):
-    """检查命令是否存在于 PATH 中"""
     return shutil.which(name) is not None
 
 tools = ['fanc','bedtools']
@@ -69,6 +68,13 @@ if len(set(resolution_check)) > 1:
     sys.exit(1)
 
 resolution = resolution_check[0]
+
+if resolution >= insulation_window:
+    print("Insulation window should be > resolution")
+    sys.exit(1)
+if resolution >= directionality_window:
+    print("Directionality window should be > resolution")
+    sys.exit(1)
 
 tmp_dir = os.path.join(output_dir,'insulation_boundary_di')
 contact_dir = os.path.join(output_dir,'contact')
@@ -156,7 +162,7 @@ for hic_sample, tag in zip(hic_samples, tags):
         print(f"Error：{e.stderr.decode()}")
 
     command = f"""awk '
-        $1 == $4 {{
+        $1 == $4 && $1 !~ /_/ {{
             chr = $1
             filename = "{contact_dir}/{tag}_" chr "_contact.txt"
             print $3 "\t" $6 "\t" $7 >> filename
@@ -191,13 +197,22 @@ except subprocess.CalledProcessError as e:
 # Plot
 for i in os.listdir(tad_dir):
     if i.endswith('.tadcompare.csv'):
-        # 创建新图形
+        # Make figure
         plt.figure(figsize=(10, 8))
         prefix = i.replace('.tadcompare.csv','')
         output_pdf = os.path.join(img_dir,prefix+'.tadcompare.pdf')
-        temp = pd.read_csv(os.path.join(tad_dir,i))
-        sizes = list(temp['Type'].value_counts(sort=False).sort_index())
-        labels = list(temp['Type'].value_counts(sort=False).sort_index().index)
+        try:
+            temp = pd.read_csv(os.path.join(tad_dir,i))
+        except pd.errors.EmptyDataError:
+            print(f"EmptyData: {i}")
+            continue
+        value_counts = temp['Type'].value_counts(sort=False).sort_index()
+        sizes_counts = list(value_counts)
+        labels = list(value_counts.index)
+
+        total = sum(sizes_counts)
+        sizes_percent = [count/total * 100 for count in sizes_counts]
+
         explode = [0] * len(labels)
         if 'strength-down' in labels:
             explode[labels.index('strength-down')] = 0.1
@@ -206,57 +221,59 @@ for i in os.listdir(tad_dir):
         with PdfPages(output_pdf) as pdf:
             # Pie chart
             wedges, texts, autotexts = plt.pie(
-                sizes,
+                sizes_percent, 
                 explode=explode,
                 shadow=True,
                 startangle=90,
                 counterclock=False,
                 wedgeprops={'linewidth': 0.7, 'edgecolor': 'black'},
-                pctdistance=0.8,
-                autopct='%1.1f%%'
+                labels=None,
+                autopct='' 
             )
-            
+
             plt.title(prefix.replace('_vs_',' vs '), fontsize=20, color="black")
+
+            # legend
+            legend_labels = [f'{label} ({percent:.1f}%)' 
+                    for label,percent in zip(labels, sizes_percent)]
             plt.legend(
                 wedges,
-                labels,
+                legend_labels,
                 loc="center left",
                 bbox_to_anchor=(1, 0.5),
                 fontsize=12
             )
-            
+
             pdf.savefig(bbox_inches='tight')
             plt.close()
         
             # ------------------------- Venn -------------------------
             plt.figure(figsize=(10,8))
             prefix.split('_vs_')
-            # 加载BED文件
+            # Load bed file
             f1 = pybedtools.BedTool(os.path.join(tad_dir,prefix.split('_vs_')[0]+".tad.bed"))
             f2 = pybedtools.BedTool(os.path.join(tad_dir,prefix.split('_vs_')[1]+".tad.bed"))
-            
-            # 计算重叠区域
+
+            # Overlap
             n_f1 = len(f1)
             n_f2 = len(f2)
             n_common = len(f1.intersect(f2, u=True))
             n_common_1 = len(f2.intersect(f1, u=True))
             n_common = min(n_common,n_common_1)
 
-            # 绘制韦恩图
+            # Venn
             v = venn2(subsets=(n_f1-n_common, n_f2-n_common, n_common),
                     set_labels=(None, None),
                     set_colors=("#DE582B", "#1868B2"),
                     alpha=0.7)
-            
-            # 设置标题
+
+            # Set title
             plt.title("Overlap of TADs", fontsize=16)
             plt.text(-0.7, 0.3, prefix.split('_vs_')[0], fontsize=14, ha='center', va='center')
             plt.text(0.7, -0.3, prefix.split('_vs_')[1], fontsize=14, ha='center', va='center')
-            
-            # 保存韦恩图到PDF
+
             pdf.savefig(bbox_inches='tight')
             plt.close()
 
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Tad compare finished") 
 print(f">>>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Finished, you can check the results now")
-

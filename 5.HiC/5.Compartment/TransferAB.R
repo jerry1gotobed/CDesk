@@ -1,6 +1,7 @@
 suppressMessages(library(stringr))
 suppressMessages(library(tidyr))
 suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -65,11 +66,32 @@ abtransfer_count <- data.frame(info=rownames(abtransfer_count),count=abtransfer_
 abtransfer_count <- separate(abtransfer_count,"info",c("cmp","status"),sep = ":")
 write.csv(abtransfer_count,paste0(save_path,"/A_B_transfer_count.csv"),row.names = FALSE)
 
+abtransfer_count <- abtransfer_count %>%
+  group_by(cmp) %>%
+  mutate(
+    fraction = count / sum(count),
+    ymax = cumsum(fraction),
+    ymin = c(0, head(ymax, n = -1)),
+    label_pos = (ymax + ymin) / 2
+  )
+
 save_path = file.path(file_path,'img')
 pdf(paste0(save_path,"/A_B_transfer_count.pdf"),width = width,height = height)
-ggplot(abtransfer_count)+
-  geom_bar(aes(x=cmp,fill=status,y=count),position="stack",stat = "identity")+
-  geom_text(aes(x=cmp,label=count,y=count),position = "stack")+
-  coord_polar(theta = "y")+
-  theme_linedraw(base_line_size = I(0))+xlab("")+ylab("")
+ggplot(abtransfer_count) +
+  geom_bar(aes(x = cmp, fill = status, y = count), position = "stack", stat = "identity") +
+  ggrepel::geom_text_repel(
+    aes(x = cmp, y = count, label = count, group = status),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    min.segment.length = 0,  
+    segment.size = 0.3,  
+    segment.color = "gray50",
+    box.padding = 0.3,  
+    force = 0.5,        
+    max.overlaps = Inf    
+  ) +
+  coord_polar(theta = "y") +
+  theme_linedraw(base_line_size = I(0)) +
+  xlab("") +
+  ylab("")
 while (!is.null(dev.list()))  dev.off()

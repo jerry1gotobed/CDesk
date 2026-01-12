@@ -90,17 +90,17 @@ seu_obj <- subset(seu_obj,
 
 # Normalize, scale data and find variable features
 cat("Normalizing and scaling data...\n")
-seu_obj <- NormalizeData(seu_obj)
+seu_obj <- NormalizeData(seu_obj,verbose=F)
 cat("Variable features: ", variable_features, "\n")
-seu_obj <- FindVariableFeatures(seu_obj, selection.method = "vst", nfeatures = variable_features)
+seu_obj <- FindVariableFeatures(seu_obj, selection.method = "vst", nfeatures = variable_features,verbose=F)
 
 # Scale the data
 all.genes <- rownames(seu_obj)
-seu_obj <- ScaleData(seu_obj, features = all.genes)
+seu_obj <- ScaleData(seu_obj, features = all.genes,verbose=F)
 
 # Perform PCA
 cat("Running PCA...\n")
-seu_obj <- RunPCA(seu_obj, features = VariableFeatures(object = seu_obj))
+seu_obj <- RunPCA(seu_obj, features = VariableFeatures(object = seu_obj),verbose=F)
 
 # Elbow plot to determine the number of dimensions to use
 cat("Generating Elbow plot...\n")
@@ -111,12 +111,12 @@ cat("Use", dim_prefer, "dimensions for clustering.\n")
 
 # Find neighbors and clusters
 cat("Finding neighbors...\n")
-seu_obj <- FindNeighbors(seu_obj, dims = 1:dim_prefer)
-seu_obj <- FindClusters(seu_obj, resolution = res)
+seu_obj <- FindNeighbors(seu_obj, dims = 1:dim_prefer,verbose=F)
+seu_obj <- FindClusters(seu_obj, resolution = res,verbose=F)
 
 # Run UMAP
 cat("Running UMAP...\n")
-seu_obj <- RunUMAP(seu_obj, dims = 1:dim_prefer)
+seu_obj <- RunUMAP(seu_obj, dims = 1:dim_prefer,verbose=F)
 
 # Visualize UMAP
 cat("Generating UMAP plot...\n")
@@ -125,7 +125,7 @@ print(umap_plot)
 
 # Run t-SNE
 cat("Running t-SNE...\n")
-seu_obj <- RunTSNE(seu_obj, dims = 1:dim_prefer)
+seu_obj <- RunTSNE(seu_obj, dims = 1:dim_prefer,verbose=F)
 
 # Visualize t-SNE
 cat("Generating t-SNE plot...\n")
@@ -133,7 +133,7 @@ tsne_plot <- DimPlot(seu_obj, reduction = "tsne", label = TRUE)
 print(tsne_plot)
 
 # Visualize cluster tree
-seu_obj <- FindClusters(seu_obj, resolution = seq(0.2, 1.2, 0.1))
+seu_obj <- FindClusters(seu_obj, resolution = seq(0.2, 1.2, 0.1),verbose=F)
 cat("Generating cluster tree...\n")
 clustree(seu_obj) + ggtitle(paste('Use', dim_prefer, 'dimensions for dimensionality reduction'))
 

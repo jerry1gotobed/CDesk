@@ -26,7 +26,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run scRNA velocity")
     
     parser.add_argument("--cellranger_output", type=str, help="Input cellranger output directory")
-    parser.add_argument("--gtf",default='',type=str, help="Input gtf file")
+    parser.add_argument("--gtf",default='',type=str, help="Specify the gtf file")
 
     parser.add_argument("--rds_file", type=str, help="Input rds file")
 
@@ -42,7 +42,6 @@ def parse_arguments():
     return parser.parse_args()
 
 def main():
-    # 解析命令行参数
     args = parse_arguments()
 
     config = os.environ.get('CDesk_config')
@@ -59,8 +58,9 @@ def main():
     plot_height = int(args.height)
     pl.rcParams["figure.figsize"] = (plot_width,plot_height)
     
-    # velocity分析
-    # 先判断有没有生成好的结果
+    # Velocity analysis
+
+    # Check if there is loom result
     cellranger_result = args.cellranger_output
     if os.path.exists(os.path.join(cellranger_result,'velocyto')):
         temp = os.path.join(cellranger_result,'velocyto')
@@ -70,7 +70,7 @@ def main():
         shutil.copy2(loom_file, input_data)
     else:
         if args.gtf == '':
-            print('Please provide gtf file')
+            print('Please specify the gtf file')
             sys.exit(1)
         gtf = args.gtf
         cmd = ['velocyto','run10x',cellranger_result,gtf,'-@',str(threads),'--verbose','-v']
@@ -79,8 +79,8 @@ def main():
         with open(log_path, 'w') as logfile:
             subprocess.run(
                 cmd,
-                stdout=logfile,          # 标准输出写入 logfile
-                stderr=subprocess.STDOUT,# 标准错误也合并到 logfile
+                stdout=logfile,          
+                stderr=subprocess.STDOUT,
                 check=True
             )
         temp = os.path.join(cellranger_result,'velocyto')
@@ -92,28 +92,28 @@ def main():
         loom_file = os.path.join(temp,loom_file)
         shutil.copy2(loom_file, input_data)
 
-    # seurat信息提取
+    # Grab the seurat meta
     seurat_file = args.rds_file
     current_dir = os.path.dirname(os.path.abspath(__file__))
     cmd = ['Rscript',os.path.join(current_dir,'velocity.R'),seurat_file,input_data,meta]
     subprocess.run(cmd, check=True)
 
-    # scVelo分析
-    # 读入velocyto分析的loom文件
+    # scVelo analysis
+    # Read the loom file
     ldata = sc.read(loom_file,cache=False)
     ldata.var_names_make_unique()
-    # 修改细胞名barcode，与Seurat保持一致
+    # Mofify the cell barcodes to keep the same with seurat file
     barcodes = [bc.split(':')[1] for bc in ldata.obs.index.tolist()]
     barcodes = [bc[0:len(bc)-1] + '-1' for bc in barcodes]
     ldata.obs.index = barcodes
     ldata.var_names_make_unique()
-    # # 读取barcode、UMAP以及Seurat的分群结果
+    # Read the barcode, UMAP and Seurat Grouping result
     cellID_obs = pd.read_csv(os.path.join(input_data,'cellID_obs.csv'))
     umap_cord = pd.read_csv(os.path.join(input_data,'cell_embeddings.csv'))
     cell_clusters = pd.read_csv(os.path.join(input_data,'clusters.csv'))
-    # 根据barcode选出我们要的细胞
+    # Choose the cells we want according to the barcode
     filtered_ldata = ldata[cellID_obs['x']].copy()
-    # 添加UMAP信息
+    # Add UMAP information
     ldata_index = pd.DataFrame(filtered_ldata.obs.index)
     ldata_index = ldata_index.rename(columns={ldata_index.columns[0]: 'CellID'})
     umap_cord = umap_cord.rename(columns={'Unnamed: 0': 'CellID'})
@@ -121,7 +121,7 @@ def main():
     umap_ordered = ldata_index.merge(umap_cord, on="CellID")
     umap_ordered = umap_ordered.iloc[:, 1:]
     filtered_ldata.obsm['X_umap'] = umap_ordered.values
-    # 添加分群信息
+    # Add grouping information
     cell_clusters = cell_clusters.rename(columns={'Unnamed: 0': 'CellID'})
     cell_clusters = ldata_index.merge(cell_clusters, on="CellID")
     cell_clusters = cell_clusters.iloc[:, 1:]
@@ -130,26 +130,26 @@ def main():
     adata = filtered_ldata
     adata.obs['seurat_clusters'] = adata.obs['seurat_clusters'].astype('category')
 
-    # 统计每个cluster的spliced与unspliced比例
+    # Calculate the proportion of spliced and unspliced
     scv.pl.proportions(adata, groupby='seurat_clusters',save=f'{output_dir}/splice_proportions.pdf')
 
-    # 速率分析
+    # Velocity analysis
     scv.pp.filter_and_normalize(adata)
     scv.pp.moments(adata)
     scv.tl.velocity(adata, mode='stochastic')
     scv.tl.velocity_graph(adata)
 
-    # 速率分析结果可视化
+    # Velocity analysis result visualization
     scv.pl.velocity_embedding_grid(adata, basis='umap', color='seurat_clusters',scale=0.25,save=f'{output_dir}/velocity.pdf')
     scv.pl.velocity_embedding_stream(adata, basis='umap',color='seurat_clusters',save=f'{output_dir}/velocity_with_embeddings.pdf')
     
-    # 识别重要基因
+    # Identify important genes
     scv.tl.rank_velocity_genes(adata, groupby='seurat_clusters', min_corr=.3)
     ranked_genes = adata.uns['rank_velocity_genes']['names']
     df = pd.DataFrame(ranked_genes)
     df.to_csv(f'{output_dir}/velocity_key_genes.csv', index=False)
 
-    # 感兴趣的基因情况
+    # Interested genes
     if args.genes != '':
         with open(args.genes, 'r') as file:
             genes_list = [line.strip() for line in file if line.strip()]
@@ -158,11 +158,11 @@ def main():
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    # 伪时间计算和可视化
-    scv.tl.velocity_pseudotime(adata)  # 由0到1
+    # Pseudotime calculate and visualization
+    scv.tl.velocity_pseudotime(adata)  # 0 - 1
     scv.pl.scatter(adata, color='velocity_pseudotime', cmap='gnuplot',save=f'{output_dir}/velocity_pseudotime.pdf') 
 
-    # PAGA分析
+    # PAGA analysos
     scv.tl.paga(adata, groups='seurat_clusters')
     scv.pl.paga(adata, basis='umap', size=50, alpha=.1,
                 min_edge_width=2, node_size_scale=1.5,save=f'{output_dir}/PAGA_velocity.pdf')
@@ -176,8 +176,8 @@ if __name__ == "__main__":
     figures_dir = os.path.join(current_dir, 'figures')
 
     if os.path.exists(figures_dir) and os.path.isdir(figures_dir):
-        # 删除 figures 文件夹
+        # Remove figures folder
         shutil.rmtree(figures_dir)
-    print('运行完成，您可以查看结果')
+    print('Done, you can see the results now.')
 
 # python velocity.py --cellranger_output /mnt/linzejie/CDesk/test/result/2.scRNA/1.preprocess/cellranger/pbmc --gtf /mnt/linzejie/scRNA/count/refdata-gex-GRCh38-2020-A/genes/genes.gtf --rds_file /mnt/linzejie/CDesk/test/data/2.scRNA/7.trajectory/RNAvelocity/velocity.rds --genes SP100,ACPP,IFNG,RGS3 -o /mnt/linzejie/CDesk/test/result/2.scRNA/7.trajectory/RNAvelocity

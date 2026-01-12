@@ -15,11 +15,6 @@ print(paste0("mode is ", mode))
 ###################################################################################################
 ####################################            FUNCTION           ################################
 ###################################################################################################
-#ref_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/ref_data.rds"
-#qry_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/qry_data.rds"
-#ref_meta <- "celltype_annotation_20210517"
-#save_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a"
-# TransferLabelAnnotation(ref_data, qry_data, "celltype_annotation_20210517", "/mnt/shiwei/Work/OTHER/CDesk/Fig3")
 TransferLabelAnnotation <- function(ref_path, qry_path, ref_meta, save_path,nfeatures_used,dims_used){
   # read data
   ref_data <- readRDS(ref_path)
@@ -32,15 +27,15 @@ TransferLabelAnnotation <- function(ref_path, qry_path, ref_meta, save_path,nfea
   ref_data <- subset(ref_data, features = common_features)
   qry_data <- subset(qry_data, features = common_features)
   
-  ref_data <- NormalizeData(ref_data, normalization.method = "LogNormalize")
-  ref_data <- FindVariableFeatures(ref_data, selection.method = "vst", nfeatures = nfeatures_used)
-  ref_data <- ScaleData(ref_data)
-  ref_data <- RunPCA(ref_data, npcs = 50)
+  ref_data <- NormalizeData(ref_data, normalization.method = "LogNormalize",verbose=F)
+  ref_data <- FindVariableFeatures(ref_data, selection.method = "vst", nfeatures = nfeatures_used,verbose=F)
+  ref_data <- ScaleData(ref_data,verbose=F)
+  ref_data <- RunPCA(ref_data, npcs = 50,verbose=F)
   
-  qry_data <- NormalizeData(qry_data, normalization.method = "LogNormalize")
-  qry_data <- FindVariableFeatures(qry_data, selection.method = "vst", nfeatures = nfeatures_used)
-  qry_data <- ScaleData(qry_data)
-  qry_data <- RunPCA(qry_data, npcs = 50)
+  qry_data <- NormalizeData(qry_data, normalization.method = "LogNormalize",verbose=F)
+  qry_data <- FindVariableFeatures(qry_data, selection.method = "vst", nfeatures = nfeatures_used,verbose=F)
+  qry_data <- ScaleData(qry_data,verbose=F)
+  qry_data <- RunPCA(qry_data, npcs = 50,verbose=F)
   
   anchors <- FindTransferAnchors(
     reference = ref_data,
@@ -48,14 +43,14 @@ TransferLabelAnnotation <- function(ref_path, qry_path, ref_meta, save_path,nfea
     dims = 1:dims_used,
     reduction = "pcaproject",
     reference.reduction = "pca",
-    features = common_features
+    features = common_features,verbose=F
   )
   
   # Transfer cell type annotations
   TransferCelltype <- TransferData(
     anchorset = anchors,
     refdata = ref_data@meta.data[[ref_meta]],
-    dims = 1:dims_used
+    dims = 1:dims_used,verbose=F
   )
   
   # Add predicted cell type and embryonic period to metadata
@@ -70,14 +65,6 @@ TransferLabelAnnotation <- function(ref_path, qry_path, ref_meta, save_path,nfea
 
 }
 
-#data_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/qry_data.rds"
-#meta_info_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/marker_info.xlsx"
-#meta_col <- "umap_clusters"
-#save_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a"
-#expression_thre <- 1.5
-#percentage_thre <- 0.7
-#marker_percentage <- 0.7
-# MarkerAnnotation(data, meta_info, "umap_clusters", save_path, 1.5, 0.8, 0.8)
 MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, expression_thre, percentage_thre, marker_percentage){
   # read data
   meta_info <- fread(meta_info_path)
@@ -103,20 +90,20 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
   rownames(result_df) <- unique(meta_info$Celltype)
   colnames(result_df) <- levels(Idents(data))
   
-  # 得到每个cluster的celltype
+  # Each cluster celltype
   for (type in unique(meta_info$Celltype)) {
     marker <- meta_info[meta_info$Celltype==type,]$Marker
     avg_exp <- AverageExpression(
       data,
       features = marker,
-      assays = "RNA",  # 默认是"RNA"，如果是其他assay请修改
-      layer = "data"    # 使用标准化数据（log1p），如果用原始counts则用"counts"
+      assays = "RNA",  
+      layer = "data"    
     )
     
-    # 计算平均表达量
+    # Average expression
     avg_exp_df <- as.data.frame(avg_exp$RNA)
     
-    # 计算表达大于0的细胞比例
+    # Expressing cells proportion 
     pct_exp_df <- as.data.frame(matrix(0, nrow = nrow(avg_exp_df), ncol = ncol(avg_exp_df)))
     rownames(pct_exp_df) <- rownames(avg_exp_df)
     colnames(pct_exp_df) <- colnames(avg_exp_df)
@@ -140,7 +127,7 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
 
   }
   
-  # 给每个细胞分配type并且保存为txt
+  # Assign celltype for eachc cell and save as txt file
   cell_file <- data.frame(Cell = character(), PredCelltype = character())
   
   result_df <- result_df[, colSums(result_df != 0) > 0]
@@ -157,9 +144,6 @@ MarkerAnnotation <- function(data_path, meta_info_path, meta_col, save_path, exp
   
 }
 
-#data_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3a/qry_data.rds"
-#save_path <- "/mnt/shiwei/Work/OTHER/CDesk/Fig3/Fig3c"
-#cluster_type <- "tsne"
 PlotData <- function(data_path, save_path, cluster_type,mode,width,height){
   data <- readRDS(data_path)
   
@@ -183,7 +167,7 @@ if (mode=='marker') {
   print(paste0("meta_col is ", meta_col))
   save_path <- args[5]
   if (!dir.exists(save_path)) {
-    dir.create(save_path, recursive = TRUE)  # 使用recursive = TRUE来确保创建多级目录
+    dir.create(save_path, recursive = TRUE)
     message("Output directory created: ", save_path)
   }
   print(paste0("save_path is ", save_path))
@@ -209,7 +193,7 @@ if (mode=='marker') {
   print(paste0("ref_meta is ", ref_meta))
   save_path <- args[5]
   if (!dir.exists(save_path)) {
-    dir.create(save_path, recursive = TRUE)  # 使用recursive = TRUE来确保创建多级目录
+    dir.create(save_path, recursive = TRUE)  
     message("Output directory created: ", save_path)
   }
   print(paste0("save_path is ", save_path))

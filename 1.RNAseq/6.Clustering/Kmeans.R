@@ -38,7 +38,7 @@ gene_expression_clustering <- function(count_file, meta_file, output_dir, k,
   # Read input files
   meta_data <- fread(meta_file, data.table = FALSE)
   Group = factor(meta_data[[group_col]],levels = unique(meta_data[[group_col]]))
-  count_data <- read.csv(count_file)
+  count_data <- read.csv(count_file,check.names = FALSE)
   row.names(count_data) = count_data[,1]
   count_data = count_data[,-1]
   

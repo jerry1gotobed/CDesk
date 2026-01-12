@@ -1,0 +1,16 @@
+# pip_requirements.txt
+--index-url https://pypi.org/simple
+--trusted-host pypi.org
+--trusted-host files.pythonhosted.org
+
+
+chardet
+pyBigWig>=0.3.18
+matplotlib-venn
+leidenalg>=0.8.0,<0.10.0
+scanpy>=1.8.0,<1.10.0
+pyscenic>=0.11.0,<0.13.0
+fanc>=0.9.0
+cooltools>=0.5.0,<0.6.0
+scvelo>=0.2.0,<0.3.0
+macs3

@@ -5,7 +5,7 @@ suppressMessages(library(Seurat))
 suppressMessages(library(dplyr))
 
 LoadInputData <- function(input_seurat) {
-  # 检查文件类型并加载数据
+  # Check file type and load data
   if (grepl("\\.h5$", input_seurat)) {
     scdata <- Read10X_h5(input_seurat)
   } else if (grepl("\\.(txt.gz|csv.gz|tsv.gz|txt|csv|tsv)$", input_seurat)) {
@@ -24,7 +24,6 @@ LoadInputData <- function(input_seurat) {
   } else {
     stop("Input ", input_seurat, " does not meet our requirements")
   }
-  # 返回加载的数据
   return(scdata)
 }
 
@@ -42,7 +41,7 @@ plot_width = as.numeric(sys_argv[10])
 plot_height = as.numeric(sys_argv[11])
 
 if (!dir.exists(output_directory)) {
-  dir.create(output_directory, recursive = TRUE)  # 使用recursive = TRUE来确保创建多级目录
+  dir.create(output_directory, recursive = TRUE)  
   message("Output directory created: ", output_directory)
 }
 
@@ -51,18 +50,18 @@ integrate_features = as.numeric(sys_argv[9]) #2000
 
 #######################################################################################
 if (!grepl("\\.rds$", sample1)){
-    # 读取数据
+    # Read
     counts <- LoadInputData(sample1)
-    # 创建 Seurat 对象
+    # Create Seurat Object
     seurat_obj1 <- CreateSeuratObject(counts = counts)
 }else {
     seurat_obj1 <- LoadInputData(sample1)
 }
 
 if (!grepl("\\.rds$", sample2)){
-    # 读取数据
+    # Read
     counts <- LoadInputData(sample2)
-    # 创建 Seurat 对象
+    # Create Seurat Object
     seurat_obj2 <- CreateSeuratObject(counts = counts)
 }else {
     seurat_obj2 <- LoadInputData(sample2)
@@ -75,6 +74,7 @@ if (! meta2 %in% colnames(seurat_obj2@meta.data)){
     stop(paste0(meta2,'not in meta data column of ',sample2))
 }
 
+# Check meta column
 if (any(! clustering1 %in% unique(seurat_obj1@meta.data[[meta1]]))){
     temp = clustering1[!clustering1 %in% unique(seurat_obj1@meta.data[[meta1]])]
     stop(paste0(temp,'not in ',sample1,' ',meta1))
@@ -92,16 +92,16 @@ common_gene <- intersect(rownames(seurat_obj1),rownames(seurat_obj2))
 seurat_obj1 <- seurat_obj1[common_gene,]
 seurat_obj2 <- seurat_obj2[common_gene,]
 
-seurat_obj1 <- NormalizeData(object = seurat_obj1, normalization.method = "LogNormalize")
-seurat_obj2 <- NormalizeData(object = seurat_obj2, normalization.method = "LogNormalize")
+seurat_obj1 <- NormalizeData(object = seurat_obj1, normalization.method = "LogNormalize",verbose=F)
+seurat_obj2 <- NormalizeData(object = seurat_obj2, normalization.method = "LogNormalize",verbose=F)
 
-seurat_obj1 <- FindVariableFeatures(object = seurat_obj1, selection.method = "vst", nfeatures = nfeatures_used)
-seurat_obj2 <- FindVariableFeatures(object = seurat_obj2, selection.method = "vst", nfeatures = nfeatures_used)
+seurat_obj1 <- FindVariableFeatures(object = seurat_obj1, selection.method = "vst", nfeatures = nfeatures_used,verbose=F)
+seurat_obj2 <- FindVariableFeatures(object = seurat_obj2, selection.method = "vst", nfeatures = nfeatures_used,verbose=F)
 
 integr_list <- list(seurat_obj1,seurat_obj2)
-integr_features <- SelectIntegrationFeatures(object.list = integr_list, nfeatures = integrate_features)
-integr_anchors <- FindIntegrationAnchors(object.list = integr_list, reference = c(1,2), anchor.features = integr_features)
-data_integrated <- IntegrateData(anchorset = integr_anchors, normalization.method = "LogNormalize", features.to.integrate = common_gene)
+integr_features <- SelectIntegrationFeatures(object.list = integr_list, nfeatures = integrate_features,verbose=F)
+integr_anchors <- FindIntegrationAnchors(object.list = integr_list, reference = c(1,2), anchor.features = integr_features,verbose=F)
+data_integrated <- IntegrateData(anchorset = integr_anchors, normalization.method = "LogNormalize", features.to.integrate = common_gene,verbose=F)
 
 # R
 sample_cor <- matrix(NA, nrow = length(clustering1), ncol = length(clustering2), dimnames = list(clustering1, clustering2))

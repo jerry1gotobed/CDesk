@@ -75,8 +75,8 @@ for(i in seq_along(scRNA_data_files)) {
     seurat_obj <- LoadInputData(scRNA_data_files[i])
   }
   # 标准化，取高变基因
-  seurat_obj <- NormalizeData(object = seurat_obj, normalization.method = "LogNormalize")
-  seurat_obj <- FindVariableFeatures(object = seurat_obj, selection.method = "vst", nfeatures = nfeatures_used)
+  #seurat_obj <- NormalizeData(object = seurat_obj, normalization.method = "LogNormalize")
+  #seurat_obj <- FindVariableFeatures(object = seurat_obj, selection.method = "vst", nfeatures = nfeatures_used)
   # 存储到列表中
   scRNA_list[[i]] <- seurat_obj
 }
@@ -130,7 +130,7 @@ if (length(all_genes) == 0){
 
 # scRNA对象
 scRNA_data <- merge(scRNA_list[[1]],y=scRNA_list[-1])
-scRNA_data = NormalizeData(scRNA_data) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
+scRNA_data = NormalizeData(scRNA_data,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
 scRNA_data = RunPCA(scRNA_data,npcs=pc.num,verbose=FALSE)
 
 scRNA_data  <- IntegrateLayers( 
@@ -144,7 +144,7 @@ bulk_data = CreateSeuratObject(counts=bulk_data)
 
 merge_list = c(scRNA_list,list(bulk_data))
 merge_data <- merge(merge_list[[1]],y=merge_list[-1])
-merge_data = NormalizeData(merge_data) %>% FindVariableFeatures(nfeatures=nfeatures_used)%>% ScaleData()
+merge_data = NormalizeData(merge_data,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
 merge_data = RunPCA(merge_data,npcs=pc.num,verbose=FALSE)
 
 merge_data  <- IntegrateLayers( 
@@ -153,22 +153,23 @@ merge_data  <- IntegrateLayers(
   verbose = FALSE,features=all_genes
 )
 
+saveRDS(merge_data,file=paste0(output_directory,'/','scRNA+bulk_integrate.rds'))
 ################# 可视化
 meta_data = as.data.frame(meta_data)
 rownames(meta_data) = meta_data$sample
 mark_cells <- intersect(colnames(scRNA_data),rownames(meta_data))
 dataType <- c(rep("scRNA", length(mark_cells)),rep("bulk", ncol(bulk_data)))
 
-merge_data <- FindNeighbors(merge_data, reduction = "integrated", dims = 1:30)
-merge_data <- FindClusters(merge_data, resolution = 1, cluster.name = "integrated.harmony")
-merge_data <- RunUMAP(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.umap")
-merge_data <- RunTSNE(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.tsne")
+merge_data <- FindNeighbors(merge_data, reduction = "integrated", dims = 1:30,verbose=F)
+merge_data <- FindClusters(merge_data, resolution = 1, cluster.name = "integrated.harmony",verbose=F)
+merge_data <- RunUMAP(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.umap",verbose=F)
+merge_data <- RunTSNE(merge_data, reduction = "integrated", dims = 1:30, reduction.name = "integrated.tsne",verbose=F)
 
 mark_cells <- c(mark_cells,colnames(bulk_data))
 select_cells <- subset(merge_data, cells = mark_cells)
 
 celltypes <- rep("NotSure", ncol(select_cells)); names(celltypes) <- colnames(select_cells)
-celltypes[intersect(colnames(select_cells),rownames(meta_data))] <- meta_data[intersect(colnames(select_cells),rownames(meta_data)),3]
+celltypes[intersect(colnames(select_cells),rownames(meta_data))] <- meta_data[intersect(colnames(select_cells),rownames(meta_data)),'tag']
 select_cells@meta.data$celltypes <- celltypes
 
 names(dataType) <- colnames(select_cells)

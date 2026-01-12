@@ -9,7 +9,7 @@ show_help() {
     echo "  -s SPECIES          Specify the species"
 }
 
-config_json='/mnt/linzejie/CDesk/config.json'
+config_json=$CDesk_config
 THREAD=8
 SCRIPT_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 

@@ -1,68 +1,23 @@
 {
   "software":{
-    "trim_galore": "/usr/bin/trim_galore",
-    "hisat2": "/usr/local/bin/hisat2",
-    "stringtie": "/usr/local/bin/stringtie",
-    "gfold":"/usr/local/bin/gfold",
-    "samtools": "/usr/local/bin/samtools",
-    "fastqc":"/usr/local/bin/fastqc",
-    "multiqc":"/usr/local/bin/multiqc",
-    "bamCoverage":"/usr/bin/bamCoverage",
-    "scTE":"/usr/local/bin/scTE",
-    "rmats":"/mnt/linzejie/software/rmats-turbo-master",
-    "rmats_plot":"/mnt/linzejie/miniconda3/envs/rmats/bin/rmats2sashimiplot",
-    "bowtie2":"/usr/local/bin/bowtie2",
-    "bamToBed":"/usr/local/bin/bamToBed",
-    "bedSort":"/usr/local/bin/bedSort",
-    "bedClip":"/usr/local/bin/bedClip",
-    "bedGraphToBigWig":"/usr/local/bin/bedGraphToBigWig",
-    "bedToBigBed":"/usr/local/bin/bedToBigBed",
-    "genomeCoverageBed":"/usr/local/bin/genomeCoverageBed",
-    "macs14":"/usr/local/bin/macs14",
-    "memechip":"/usr/local/bin/meme-chip",
-    "findMotifsGenome":"/home/sugon/Install/homer/bin/findMotifsGenome.pl",
-    "annotatePeaks":"/home/sugon/Install/homer/bin/annotatePeaks.pl",
-    "bedtools":"/usr/local/bin/bedtools",
-    "bigWigSummary":"/usr/local/bin/bigWigSummary",
-    "intersectBed":"/usr/local/bin/intersectBed",
-    "bigWigAverageOverBed":"/usr/local/bin/bigWigAverageOverBed",
-    "igv":"/mnt/linzejie/software/IGV_Linux_2.19.4",
-    "xvfb-run":"/usr/bin/xvfb-run",
-    "multiBigwigSummary":"/usr/bin/multiBigwigSummary",
-    "cellranger":"/home/sugon/Install/cellranger-7.1.0/cellranger",
+    "cellranger":"/mnt/linzejie/software/cellranger-10.0.0/bin/cellranger",
     "DrSeq":"/usr/local/bin/DrSeq",
     "dnbc4tools":"/mnt/linzejie/software/dnbc4tools2.1.3/dnbc4tools",
-    "CStreet":"/mnt/linzejie/miniconda3/envs/velocyto/bin/CStreet",
-    "velocyto":"/mnt/linzejie/miniconda3/envs/velocyto/bin/velocyto",
-    "pyscenic":"/mnt/yutiancheng/miniconda3/envs/grn_env/bin/pyscenic",
     "juicer_tools_jar":"/mnt/kuangjunqi/kuangjunqi/tools/hic/juicer_tools_1.22.01.jar",
-    "dipc":"/mnt/zhaochengchen/Work/OTHER/4.KJQ/2.HiC-Pro/4.hickit/dip-c",
+    "dipc":"/mnt2/zhaochengchen/Work/OTHER/4.KJQ/2.HiC-Pro/4.hickit/dip-c",
     "hickit":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit",
     "hickit_js":"/mnt/linzejie/software/hickit-0.1.1_x64-linux/hickit.js",
-    "celescope_conda":"/mnt/linzejie/miniconda3/envs/celescope"
+    "celescope_path":"/mnt3/linzejie/miniconda3/envs/celescope/bin"
   },
-  "R_lib":"/mnt/linzejie/R_library",
-  "python_lib":"/mnt/linzejie/.local/lib/python3.8/site-packages",
   "conda_env":{
-    "degd": "/mnt/linzejie/miniconda3/envs/degd",
-    "rmats": "/mnt/linzejie/miniconda3/envs/rmats",
-    "monocle3": "/mnt/linzejie/miniconda3/envs/monocle3",
-    "pyscenic":"/mnt/linzejie/miniconda3/envs/pyscenic",
-    "velocyto":"/mnt/linzejie/miniconda3/envs/velocyto",
-    "celescope":"/mnt/linzejie/miniconda3/envs/celescope",
-    "CDesk":"/mnt/linzejie/miniconda3/envs/CDesk",
-    "CDesk_R":"/mnt/linzejie/miniconda3/envs/CDesk_R",
-    "CDesk_py3.7":"/mnt/linzejie/miniconda3/envs/CDesk_py3.7",
-    "CDesk_py2.7":"/mnt/linzejie/miniconda3/envs/CDesk_py2.7"
-  },
-  "Known_motif":{
-    "mm10":"/mnt/zhaochengchen/Data/mm10/homer.KnownMotifs.mm10.191020.bed",
-    "hg38":"/mnt/liudong/task/20230811_TADChange/result/CTCF/homer.KnownMotifs.hg38.191020.bed"
-  },
-  "motif_database":"/mnt/kongtianci/CDesk/ACATseq/meme_ref/motif_databases",
+    "CDesk":"/mnt3/linzejie/miniconda3/envs/CDesk",
+    "CDesk_R":"/mnt3/linzejie/miniconda3/envs/CDesk_R",
+    "CDesk_py3.7":"/mnt3/linzejie/miniconda3/envs/CDesk_py3.7",
+    "CDesk_py2.7":"/mnt3/linzejie/miniconda3/envs/CDesk_py2.7"
+  }, 
   "data":{
     "mm10": {
-      "mapping_index": "/mnt/zhaochengchen/Data/mm10/mm10",
+      "hisat2_index": "/mnt/zhaochengchen/Data/mm10/mm10",
       "refseq_gtf": "/mnt/zhaochengchen/Data/mm10/mm10.ncbiRefSeq.WithUCSC.gtf",
       "refseq_bed": "/mnt/zhaochengchen/Data/mm10/mm10.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/mm10/mm10.len",
@@ -79,7 +34,7 @@
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/mm10"
     },
     "rn7": {
-      "mapping_index": "/mnt/liudong/data/Genome/rn7/rn7",
+      "hisat2_index": "/mnt/liudong/data/Genome/rn7/rn7",
       "refseq_gtf": "/mnt/liudong/data/Genome/rn7/rn7.refGene.gtf",
       "refseq_bed": "/mnt/liudong/data/Genome/rn7/rn7.refGene.fix.bed",
       "chromInfo": "/mnt/liudong/data/Genome/rn7/rn7.len",
@@ -96,7 +51,7 @@
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/rn7"
     },
     "hg38": {
-      "mapping_index": "/mnt/zhaochengchen/Data/hg38/hg38",
+      "hisat2_index": "/mnt/zhaochengchen/Data/hg38/hg38",
       "refseq_gtf": "/mnt/zhaochengchen/Data/hg38/hg38.ncbiRefSeq.WithUCSC.gtf",
       "refseq_bed": "/mnt/zhaochengchen/Data/hg38/hg38.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/hg38/hg38.len",
@@ -113,7 +68,7 @@
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/hg38"
     },
     "susScr11": {
-      "mapping_index": "/mnt/zhaochengchen/Data/susScr11/susScr11",
+      "hisat2_index": "/mnt/zhaochengchen/Data/susScr11/susScr11",
       "refseq_gtf": "/mnt/liudong/data/Genome/susScr11/susScr11.ncbiRefSeq.gtf",
       "refseq_bed": "/mnt/liudong/data/Genome/susScr11/susScr11.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/susScr11/susScr11.chrom.sizes",
@@ -130,9 +85,9 @@
       "dnbc_mapindex":"/mnt/linzejie/data/dnbc4tools_data/susScr11"
     },
     "galGal6": {
-      "mapping_index": "/mnt/zhaochengchen/Data/Gal6/galGal6",
+      "hisat2_index": "/mnt/zhaochengchen/Data/Gal6/galGal6",
       "refseq_gtf": "/mnt/zhaochengchen/Data/Gal6/galGal6.ncbiRefSeq.WithUCSC.gtf",
-      "refseq_bed": "/mnt/zhaochengchen/Data/Gal6/galGal6.refseq.bed",
+      "refseq_bed": "/mnt/zhaochengchen/Data/Gal6/Gal6.refseq.bed",
       "chromInfo": "/mnt/zhaochengchen/Data/Gal6/galGal6.chrom.sizes",
       "fasta": "/mnt/linzejie/data/fasta/galGal6.fa",
       "TE_idx": "/mnt/linzejie/data/galGal6.exclusive.idx",
@@ -148,11 +103,17 @@
     },
     "rmats_test":{
     	"gff3":"/mnt/linzejie/CDesk_test/data/1.RNA/7.splice/annotation.gff3",
-	"refseq_gtf": "/mnt/linzejie/CDesk_test/data/1.RNA/7.splice/annotation.gtf"
+	"refseq_gtf": "/mnt/linzejie/CDesk_test/data/1.RNA/7.splice/annotation.gtf",
+	"singleron_mapindex":"/mnt2/zhaochengchen/Work/OTHER/03.WXM/3.WXM_cPGCscRNAseq/result/0.mapping/gg_ncbi"
     },
     "mm10_plusmajsat":{
         "fasta":"/mnt/zhangzheting/reference/mm10_majsat/mm10.plusmajsat.fa",
         "chromInfo": "/mnt/zhangzheting/reference/mm10_majsat/mm10.plusmajsat.chrom.size"
+    },
+    "pigT2T":{
+	"hisat2_index":"/mnt3/linzejie/TibetanT2T/ref/hisat2/SusMuscle",
+	"refseq_bed":"/mnt3/linzejie/TibetanT2T/ref/SusMuscle.bed",
+	"refseq_gtf":"/mnt3/linzejie/TibetanT2T/ref/SusMuscle_protein_coding.gtf"
     }
   }
 }

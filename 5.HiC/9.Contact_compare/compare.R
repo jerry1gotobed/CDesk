@@ -8,6 +8,13 @@ output_dir = sys_argv[1]
 prefix1 = sys_argv[2]
 prefix2 = sys_argv[3]
 chr = sys_argv[4]
+A_min = sys_argv[5]
+
+A_min <- if (is.na(A_min) || A_min == "" || toupper(A_min) == "NONE") {
+  NA
+} else {
+  as.numeric(A_min)
+}
 
 ####################################  HiC compare  ####################################
 hic1 = read.csv(file.path(output_dir,'tmp',paste0(prefix1,'.txt')),sep = '\t',header = FALSE)
@@ -28,7 +35,7 @@ cells_norm_table <- hic_loess(cells_table, Plot = FALSE ,parallel = TRUE)
 
 #A cutoff can be 10th percentile
 CairoPDF(file.path(output_dir,"MD_plot_1.pdf"))
-hic_compare_table <- hic_compare(cells_norm_table,adjust.dist = TRUE, p.method = 'fdr', Plot = TRUE)
+hic_compare_table <- hic_compare(cells_norm_table,adjust.dist = TRUE, p.method = 'fdr', Plot = TRUE,A.min=A_min)
 dev.off()
 
 CairoPDF(file.path(output_dir,"MD_plot_2.pdf"))

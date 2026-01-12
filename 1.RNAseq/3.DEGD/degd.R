@@ -21,6 +21,8 @@ top_num <- as.numeric(sys_argv[9])
 width <- as.numeric(sys_argv[10])
 height <- as.numeric(sys_argv[11])
 
+gene_check = gene
+
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
@@ -220,7 +222,7 @@ for (i in Cols){
 
   if (Plot == 'True'){
     missing = setdiff(gene,row.names(deg))
-    if (length(missing) > 0 && gene != "NO"){
+    if (length(missing) > 0 && gene_check != "NO"){
       cat('Gene not in result:',missing,'\n')
     }
     mark = intersect(gene,row.names(deg))

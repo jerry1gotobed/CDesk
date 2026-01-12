@@ -7,6 +7,8 @@ channels:
 dependencies:
   - python=2.7
   - bioconda::macs
-  - pip:
-    - numpy
-    - scipy
+  - numpy
+  - scipy
+ # - pip:
+    #- numpy
+    #- scipy

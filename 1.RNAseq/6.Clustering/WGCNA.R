@@ -123,7 +123,8 @@ dim(textMatrix) <- dim(moduleTraitCor)
 pdf(file.path(output_dir, "module_trait_relationships.pdf"), width = 10, height = 6)
 par(mar = c(6, 10, 3, 3))
 labeledHeatmap(Matrix = moduleTraitCor, xLabels = colnames(design),
-               yLabels = names(MEs), textMatrix = textMatrix, 
+               yLabels = names(MEs),ySymbols=names(MEs),colorLabels=FALSE,
+	       textMatrix = textMatrix,cex.lab.y = 0.5, 
                colors = blueWhiteRed(50), cex.text = 0.5, zlim = c(-1, 1),
                main = "Module-trait relationships", margins = c(6, 6))
 while (!is.null(dev.list()))  dev.off()

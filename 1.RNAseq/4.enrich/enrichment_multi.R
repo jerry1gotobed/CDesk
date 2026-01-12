@@ -24,6 +24,7 @@ suppressMessages(library(data.table))
 library(enrichplot) %>% suppressMessages()
 library(ggplot2) %>% suppressMessages()
 library(clusterProfiler) %>% suppressMessages()
+library(KEGG.db) %>% suppressMessages()
 
 if (!dir.exists(output)) dir.create(output, recursive = TRUE)
 
@@ -88,9 +89,10 @@ perform_enrichment <- function(gene_file, species) {
                             minGSSize = 1,
                             maxGSSize = 5000,
                             pvalueCutoff = 0.05,
-                            qvalueCutoff = 0.5)
-  
-  enrich_KEGG_df <- as.data.frame(enrich_KEGG)
+                            qvalueCutoff = 0.5,use_internal_data = T)
+
+  enrich_KEGG_df <- setReadable(enrich_KEGG, OrgDb = org_db, keyType="ENTREZID")
+  enrich_KEGG_df = enrich_KEGG_df@result  
   kegg_empty <- nrow(enrich_KEGG_df) == 0
   
   # Check
@@ -116,6 +118,7 @@ perform_enrichment <- function(gene_file, species) {
   }
   
   enrich_result$ONTOLOGY = factor(enrich_result$ONTOLOGY,levels = c('BP','CC','MF','KEGG'))
+  enrich_result = enrich_result[enrich_result[['p.adjust']]<0.05,]
   return(enrich_result)
 }
 
@@ -123,7 +126,7 @@ perform_custom_enrichment <- function(gene_file,customer_term) {
   gene_list <- read.table(gene_file, header = FALSE, stringsAsFactors = FALSE)  
   
   # Custom term
-  customer_term <- read.table(customer_term,header = FALSE,stringsAsFactors = FALSE,col.names = c("Name","Gene"),sep = "\t")
+  customer_term <- read.table(customer_term,header = FALSE,stringsAsFactors = FALSE,col.names = c("Name","Gene"),sep = "\t",quote = "")
   
   if (ncol(customer_term)<2) {
     stop("customer file needs two colums: functional term and gene(symbol)")
@@ -131,7 +134,7 @@ perform_custom_enrichment <- function(gene_file,customer_term) {
   
   customer_term_id <- unique(customer_term$Name)
   customer_term_id <- data.frame(Term=paste0("term_",c(1:length(customer_term_id))),Name=customer_term_id)
-  customer_term <- merge(customer_term,customer_term_id,by="Name") %>% select(Term,Gene)
+  customer_term <- merge(customer_term,customer_term_id,by="Name") %>% dplyr::select(Term,Gene)
   
   # Enrichment analysis
   enrich_result <- enricher(gene = gene_list$V1,
@@ -145,7 +148,8 @@ perform_custom_enrichment <- function(gene_file,customer_term) {
   if (nrow(enrich_result) == 0){
     stop("Error: Empty enrichment results")
   }
-  enrich_result$ONTOLOGY = 'Custom' 
+  enrich_result$ONTOLOGY = 'Custom'
+  enrich_result = enrich_result[enrich_result[['p.adjust']]<0.05,] 
   return(enrich_result)
 }
 

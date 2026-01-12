@@ -14,10 +14,12 @@ draw_heatmap = function(exp,gene,meta,width,height,output_dir,top_num){
     data = log2(exp+1)
     annotation_col = data.frame(group=meta$group)
     row.names(annotation_col) = meta$sample
+    Row <- ifelse(nrow(data)>1, TRUE, FALSE)
+    Col <- ifelse(ncol(data)>1, TRUE, FALSE)
     pheatmap::pheatmap(data, 
                        show_colnames = T,
-                       cluster_rows = TRUE,
-                       cluster_cols = TRUE,
+                       cluster_rows = Row,
+                       cluster_cols = Col,
                        annotation_col =annotation_col, 
                        annotation_legend=TRUE, 
                        show_rownames = T,
@@ -39,9 +41,11 @@ draw_heatmap = function(exp,gene,meta,width,height,output_dir,top_num){
     column_annotation <- HeatmapAnnotation(
       Group = meta$group)
     pdf(paste0(output_dir,'/','heatmap.pdf'),width = width,height = height)
+    Row <- ifelse(nrow(data)>1, TRUE, FALSE)
+    Col <- ifelse(ncol(data)>1, TRUE, FALSE)
     ht = Heatmap(as.matrix(data),
-                 cluster_columns = TRUE,  
-                 cluster_rows = TRUE,     
+                 cluster_columns = Col,  
+                 cluster_rows = Row,     
                  show_row_names = FALSE,  
                  show_column_names = TRUE, 
                  top_annotation = column_annotation
@@ -89,7 +93,7 @@ if (method=='heatmap'){
   output_dir <- sys_argv[6]
   width <- as.numeric(sys_argv[7])
   height <- as.numeric(sys_argv[8])
-  
+  gene_check=gene 
   diff <- read.csv(gfold, sep=',', header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
   
   # Significant
@@ -117,7 +121,7 @@ if (method=='heatmap'){
     gene = trimws(readLines(gene))
   }
   missing = setdiff(gene,diff$Gene)
-  if (length(missing) > 0 && gene != "NO"){
+  if (length(missing) > 0 && gene_check != "NO"){
       cat('Gene not in result:',missing,'\n')
   }
   mark = gene[gene%in%diff$Gene]
