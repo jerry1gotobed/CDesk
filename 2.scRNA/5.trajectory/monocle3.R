@@ -80,8 +80,8 @@ p = plot_cells(cds,
 ggsave(paste0(output_directory,'/Pseudotime_in',meta,'.pdf'), plot = p, width = plot_width, height = plot_height)
 
 # a helper function to identify the root principal points:
-get_earliest_principal_node  <- function(cds, time_bin=start_p){
-  cell_ids <- which(colData(cds)[, "celltype"] == time_bin)
+get_earliest_principal_node  <- function(cds, time_bin=start_p,meta){
+  cell_ids <- which(colData(cds)[, meta] == time_bin)
   
   closest_vertex <-cds@principal_graph_aux[["UMAP"]]$pr_graph_cell_proj_closest_vertex
   closest_vertex <- as.matrix(closest_vertex[colnames(cds), ])
@@ -90,8 +90,7 @@ get_earliest_principal_node  <- function(cds, time_bin=start_p){
   
   root_pr_nodes
 }
-cds = order_cells(cds, root_pr_nodes=get_earliest_principal_node(cds))
-
+cds = order_cells(cds, root_pr_nodes=get_earliest_principal_node(cds,start_p,meta))
 
 p = plot_cells(cds, color_cells_by = "pseudotime", label_cell_groups = FALSE, 
            label_leaves = FALSE,  label_branch_points = FALSE)
@@ -106,7 +105,7 @@ Track_genes_sig <- Track_genes %>% top_n(n=10, morans_I) %>%
   pull(gene_short_name) %>% as.character()
 
 # Top DEGs expression trend
-p = plot_genes_in_pseudotime(cds[Track_genes_sig,], color_cells_by="celltype", 
+p = plot_genes_in_pseudotime(cds[Track_genes_sig,], color_cells_by=meta, 
                          min_expr=0.5, ncol = 2)
 ggsave(paste0(output_directory,"/Top10_DEGs_expression_trend.pdf"), plot = p, width = plot_width, height = plot_height)
 # FeaturePlot
@@ -118,7 +117,7 @@ ggsave(paste0(output_directory,"/Top10_DEGs_FeaturePlot.pdf"), plot = p, width =
 genelist <- pull(Track_genes, gene_short_name) %>% as.character()
 gene_module <- find_gene_modules(cds[genelist,], resolution=1e-2, cores = 10) # ***
 cell_group <- tibble::tibble(cell=row.names(colData(cds)), 
-                             cell_group=colData(cds)$celltype)
+                             cell_group=colData(cds)[[meta]])
 agg_mat <- aggregate_gene_expression(cds, gene_module, cell_group)
 row.names(agg_mat) <- stringr::str_c("Module ", row.names(agg_mat))
 pheatmap::pheatmap(agg_mat, scale="column", clustering_method="ward.D2", 

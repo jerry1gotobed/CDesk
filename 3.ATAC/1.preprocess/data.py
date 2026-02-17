@@ -12,6 +12,9 @@ outroot = args.o
 os.makedirs(outroot, exist_ok=True)
 
 data_dir = os.path.join(outroot,'data')
+if os.path.exists(data_dir):
+    if os.path.isdir(data_dir):
+        shutil.rmtree(data_dir)
 os.makedirs(data_dir, exist_ok=True)
 
 bam_pair_dir = os.path.join(outroot,'Bam','pair')

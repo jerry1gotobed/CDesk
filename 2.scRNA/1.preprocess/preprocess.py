@@ -43,6 +43,10 @@ def cellranger(args):
 
     os.makedirs(args.o,exist_ok=True)
     os.makedirs(f'{args.o}/cellranger',exist_ok=True)
+    folder_path = f'{args.o}/cellranger/input'
+    if os.path.exists(folder_path):
+        if os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
     os.makedirs(f'{args.o}/cellranger/input',exist_ok=True)
 
     # Link files
@@ -183,6 +187,10 @@ def singleron(args):
         config = json.load(f)
 
     os.makedirs(f'{args.o}/singleron', exist_ok=True)
+    folder_path = f'{args.o}/singleron/data'
+    if os.path.exists(folder_path):
+        if os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
     os.makedirs(f'{args.o}/singleron/data', exist_ok=True)
 
     # Link files

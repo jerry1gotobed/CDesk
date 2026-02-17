@@ -92,6 +92,14 @@ def tools_download(args):
     cmd = [bash_script,'-i',args.input,'-o',args.output,'-p',str(args.thread),'-k',args.key]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
+# tools 2. Prepare
+def tools_prepare(args):
+    args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
+    args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
+    python_script = os.path.join(root_dir,'0.Tools','2.Prepare','prepare.py')
+    cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'-o',args.output,'--pair',args.pair,'--single',args.single]
+    subprocess.run(cmd,check=True,env=CDesk_env)
+
 # bulkRNA 1. Preprocess
 def bulkRNA_preprocess(args): 
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
@@ -115,9 +123,9 @@ def bulkRNA_preprocess(args):
         cmd = [bash_script, '-i', f"{args.output}/Bam", '-o', f"{args.output}/TE", '-p', str(args.thread),'-s',args.species]
         subprocess.run(cmd, check=True,env=CDesk_env)
 
-# bulkRNA 2. QC
-def bulkRNA_QC(args):
-    R_script = os.path.join(root_dir,'1.RNAseq','2.QC','QC.R')
+# bulkRNA 2. cor
+def bulkRNA_cor(args):
+    R_script = os.path.join(root_dir,'1.RNAseq','2.correlation','cor.R')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/');args.group = args.group.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output);args.group = os.path.abspath(args.group)
     cmd = ['Rscript', R_script,args.input,args.output,args.group,str(args.batch),str(args.width),str(args.height)]
@@ -417,8 +425,8 @@ def ATAC_preprocess(args):
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 # ATAC: 2. QC
-def ATAC_QC(args):
-    python_script = os.path.join(root_dir,'3.ATAC','2.QC','QC.py')
+def ATAC_cor(args):
+    python_script = os.path.join(root_dir,'3.ATAC','2.correlation','cor.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
     cmd = [CDesk_env['python3_7'], python_script,'-i',args.input,'--species',args.species,'--bin',str(args.bin),
@@ -495,9 +503,9 @@ def ATAC_igv(args):
                '--type',args.type]
     subprocess.run(cmd,check=True,env=CDesk_env)
 
-# ATAC: 7. Correlation
-def ATAC_correlation(args):
-    bash_script = os.path.join(root_dir,'3.ATAC','7.correlation','ATAC_data_correlation.sh')
+# ATAC: 7. Similarity
+def ATAC_similarity(args):
+    bash_script = os.path.join(root_dir,'3.ATAC','7.similarity','ATAC_data_correlation.sh')
     args.bw1 = args.bw1.rstrip('/');args.output = args.output.rstrip('/');args.bw2 = args.bw2.rstrip('/')
     args.bw1 = os.path.abspath(args.bw1);args.output = os.path.abspath(args.output);args.bw2 = os.path.abspath(args.bw2)
     if args.region:
@@ -546,7 +554,7 @@ def HiC_preprocess(args):
     subprocess.run(cmd,check=True,env=CDesk_env)
 
 # HiC: 2. Correlation
-def HiC_correlation(args):
+def HiC_cor(args):
     python_script = os.path.join(root_dir,'5.HiC','2.Correlation','correlation.py')
     args.input = args.input.rstrip('/');args.output = args.output.rstrip('/')
     args.input = os.path.abspath(args.input);args.output = os.path.abspath(args.output)
@@ -644,6 +652,13 @@ def parse_arguments():
     download_parser.add_argument('--key','-k', required=True, help='Specify the ASCP Key Path')
     download_parser.add_argument('--thread','-t', default=5,type=int,help='Specify the number of threads, default: 5')
 
+    # tools: 2. prepare
+    prepare_parser = tools_subparsers.add_parser('prepare', help='Prepare input csv')
+    prepare_parser.add_argument('--input','-i', required=True, help='The input directory')
+    prepare_parser.add_argument('--output','-o', required=True, help='Specify the output directory')
+    prepare_parser.add_argument("--pair",default='',type=str, help="Pair suffix, comma separate")
+    prepare_parser.add_argument("--single",default='',type=str,help='Single suffix')
+
     # bulkRNA
     bulkRNA_parser = subparsers.add_parser('bulkRNA', help='bulkRNA-seq pipeline')
     bulkRNA_subparsers = bulkRNA_parser.add_subparsers(help='bulkRNA-seq pipeline', title='bulkRNA-seq pipeline', dest='bulkRNA_command')
@@ -660,7 +675,7 @@ def parse_arguments():
     bulkPreprocessing_parser.add_argument('-te', action='store_true', help='If specified, perform a TE expression analysis (optional)')
     bulkPreprocessing_parser.add_argument('--thread','-t', help='Specify number of threads (default is 8)',default=8,type=int)
 
-    # bulkRNA: 2. QC
+    # bulkRNA: 2. cor
     bulkQC_parser = bulkRNA_subparsers.add_parser('correlation', help='bulkRNA-seq sample correlation')
     # Required parameters
     bulkQC_parser.add_argument('--input','-i', required=True, help='Specify the input gene expression file (.csv), column name as sample, row name as gene')
@@ -1036,8 +1051,8 @@ def parse_arguments():
     ATACpreprocess_parser.add_argument('-s','--species',required=True, help='Specify species',choices=list(config['data'].keys()))
     ATACpreprocess_parser.add_argument('-t','--thread',type=int,default=8, help='Number of threads, default: 8')
 
-    # ATAC: 2. QC
-    ATAC_QC_parser = ATAC_subparsers.add_parser('QC', help='ATAC replicate QC')
+    # ATAC: 2. cor
+    ATAC_QC_parser = ATAC_subparsers.add_parser('correlation', help='ATAC sample correlation')
     ATAC_QC_parser.add_argument("-i","--input",required=True, type=str, help="The input ATAC sample information file")
     ATAC_QC_parser.add_argument("-s","--species", required=True,type=str, help="Species",choices=list(config['data'].keys()))
     ATAC_QC_parser.add_argument("--bin", type=int,default=100000, help="Bin size for genomic binning, default: 100000")
@@ -1110,8 +1125,8 @@ def parse_arguments():
     ATAC_igv_parser.add_argument("--region",required=True,help="Specify the regions, separate by ,")
     ATAC_igv_parser.add_argument("--type", default='png', type=str,choices=['svg','png'] ,help="svg or png output")
 
-    # ATAC: 7. Correlation
-    ATAC_correlation_parser = ATAC_subparsers.add_parser('correlation', help='ATAC correlation analysis')
+    # ATAC: 7. Similarity
+    ATAC_correlation_parser = ATAC_subparsers.add_parser('similarity', help='ATAC sample similarity analysis')
     ATAC_correlation_parser.add_argument("--bw1",required=True,help='Path to the first bw file')
     ATAC_correlation_parser.add_argument("--bw2",required=True,help='Path to the second bw file')
     ATAC_correlation_parser.add_argument("-o","--output",required=True,help='Output directory')
@@ -1342,11 +1357,13 @@ def main():
     if args.omics == 'tools':
         if args.tools_command == 'download':
             tools_download(args)
+        elif args.tools_command == 'prepare':
+            tools_prepare(args)
     elif args.omics == 'bulkRNA':
         if args.bulkRNA_command == 'preprocess':
             bulkRNA_preprocess(args)
         elif args.bulkRNA_command == 'correlation':
-            bulkRNA_QC(args)
+            bulkRNA_cor(args)
         elif args.bulkRNA_command == 'DEG':
             bulkRNA_DEG(args)
         elif args.bulkRNA_command == 'enrich':
@@ -1377,38 +1394,38 @@ def main():
     elif args.omics == 'ATAC':
         if args.ATAC_command == 'preprocess':
             ATAC_preprocess(args)
-        elif args.ATAC_command == 'QC':
-            ATAC_QC(args)
+        elif args.ATAC_command == 'correlation':
+            ATAC_cor(args)
         elif args.ATAC_command == 'dynamic':
             ATAC_dynamic(args)
         elif args.ATAC_command == 'motif':
             ATAC_motif(args)
         elif args.ATAC_command == 'accessbility':
             ATAC_accessbility(args)
-        elif args.ATAC_command == 'correlation':
-            ATAC_correlation(args)
+        elif args.ATAC_command == 'similarity':
+            ATAC_similarity(args)
         elif args.ATAC_command == 'igv':
             ATAC_igv(args)
     elif args.omics == 'ChIPseqCUTTag':
         if args.ChIPseq_CUTTag_command == 'preprocess':
             ChIPseq_CUTTag_preprocess(args)
-        elif args.ChIPseq_CUTTag_command == 'QC':
-            ATAC_QC(args)
+        elif args.ChIPseq_CUTTag_command == 'correlation':
+            ATAC_cor(args)
         elif args.ChIPseq_CUTTag_command == 'pattern':
             ChIPseq_CUTTag_pattern(args)
         elif args.ChIPseq_CUTTag_command == 'motif':
             ATAC_motif(args)
         elif args.ChIPseq_CUTTag_command == 'accessbility':
             ATAC_accessbility(args)
-        elif args.ChIPseq_CUTTag_command == 'correlation':
-            ATAC_correlation(args)
+        elif args.ChIPseq_CUTTag_command == 'similarity':
+            ATAC_similarity(args)
         elif args.ChIPseq_CUTTag_command == 'igv':
             ATAC_igv(args)
     elif args.omics == 'HiC':
         if args.HiC_command == 'preprocess':
             HiC_preprocess(args)
         if args.HiC_command == 'correlation':
-            HiC_correlation(args)
+            HiC_cor(args)
         elif args.HiC_command == 'matrix':
             HiC_matrix(args)
         elif args.HiC_command == 'TAD':

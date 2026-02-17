@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import argparse
 import sys
+import shutil
 
 parser = argparse.ArgumentParser(description="Run CStreet analysis")
 parser.add_argument("-i",required=True,type=str, help="Input expression matrixes list file")
@@ -12,6 +13,9 @@ outroot = args.o
 os.makedirs(outroot, exist_ok=True)
 
 data_dir = os.path.join(outroot,'data')
+if os.path.exists(data_dir):
+    if os.path.isdir(data_dir):
+        shutil.rmtree(data_dir)
 os.makedirs(data_dir, exist_ok=True)
 
 bam_dir = os.path.join(outroot,'Bam')
