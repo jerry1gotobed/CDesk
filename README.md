@@ -117,50 +117,85 @@ We have provided pre-built reference configuration files for CDesk for mm10 a
 ## [0. Tools and tips ](Tools.html)
 0.1 Tools: Data download
 
+0.2 Prepare: Prepare input csv
+
 ## [1. BulkRNA ](BulkRNA.html)
 1.1 bulkRNA: Preprocess
+
 1.2 bulkRNA: Correlation
+
 1.3 bulkRNA: DEG
+
 1.4 bulkRNA: Enrich
+
 1.5 bulkRNA: Similarity
+
 1.6 bulkRNA: Clustering
+
 1.7 bulkRNA: Splice
 
 ## [2. scRNA ](scRNA.html)
 2.1 scRNA: Preprocess
+
 2.2 scRNA: Cluster
+
 2.3 scRNA: Annotation
+
 2.4 scRNA: Marker
+
 2.5 scRNA: Trajectory
+
 2.6 scRNA: Similarity
+
 2.7 scRNA: Interaction
+
 2.8 scRNA: Integrate
 
 ## [3. ATAC ](ATAC.html)
 3.1 ATAC: Preprocess
+
 3.2 ATAC: QC
+
 3.3 ATAC: Dynamic
+
 3.4 ATAC: Motif
+
 3.5 ATAC: Accessbility
+
 3.6 ATAC: IGV
+
 3.7 ATAC: Correlation
 
 ## [4. ChIPseq&CUTTag ](ChIPseq&CUTTag.html)
-4.1 ATAC: Preprocess
-4.2 ATAC: QC
-4.3 ATAC: Pattern
-4.4 ATAC: Motif
-4.5 ATAC: Accessbility
-4.6 ATAC: IGV
-4.7 ATAC: Correlation
+4.1 ChIPseqCUTTag: Preprocess
+
+4.2 ChIPseqCUTTag: QC
+
+4.3 ChIPseqCUTTag: Pattern
+
+4.4 ChIPseqCUTTag: Motif
+
+4.5 ChIPseqCUTTag: Accessbility
+
+4.6 ChIPseqCUTTag: IGV
+
+4.7 ChIPseqCUTTag: Correlation
 
 ## [5. HiC ](HiC.html)
 5.1 HiC: Preprocess
+
 5.2 HiC: Sample Correlation
+
 5.3 HiC: Matrix balancing and Format transformation
+
 5.4 HiC: TAD
+
 5.5 HiC: Compartment
+
 5.6 HiC: Loop
+
 5.7 HiC: 3D reconstruction
+
 5.8 HiC: Distance-contact
+
 5.9 HiC: Contact compare
