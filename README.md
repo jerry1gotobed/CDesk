@@ -1,4 +1,12 @@
-# CDesk handbook
+<div align="center">
+
+# CDesk Multi-Omics Analysis Pipeline
+
+📚 **Documentation**: [**User Guide**](https://jerry1gotobed.github.io/CDesk.github.io/CDesk.html)
+
+</div>
+
+
 CDesk is an integrated multi-omics analysis pipeline designed for processing data from various sequencing-based assays, including RNA-seq, scRNA-seq, ATAC-seq, CUT&Tag, ChIP-seq, and Hi-C. It comprises multiple subcommands that cover a comprehensive range of analysis tasks, from raw sequencing data process to downstream various advanced functions. Dedicated conda environment YAML files are supplied. To install, simply create the Conda environment from thess files (some functions may require additional software) and prepare the necessary species-specific data. Once configured, users can perform the desired analyses by entering the corresponding command on the command line.
 
 <div align="center">
@@ -6,7 +14,7 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 ![](./CDesk.png)
 </div>
 
-## [ Installation ](CDesk.html)
+## Installation
 1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
@@ -114,12 +122,12 @@ An example configuration is provided below. You can customize it to support addi
 
 We have provided pre-built reference configuration files for CDesk for mm10 and hg38, including refseq_bed, tf_file, promoter_file, TE_idx, and refgenes in Zenodo at https://doi.org/10.5281/zenodo.18666888.
 
-## [0. Tools and tips ](Tools.html)
+## 0. Tools and tips
 0.1 Tools: Data download
 
 0.2 Prepare: Prepare input csv
 
-## [1. BulkRNA ](BulkRNA.html)
+## 1. BulkRNA
 1.1 bulkRNA: Preprocess
 
 1.2 bulkRNA: Correlation
@@ -134,7 +142,7 @@ We have provided pre-built reference configuration files for CDesk for mm10 a
 
 1.7 bulkRNA: Splice
 
-## [2. scRNA ](scRNA.html)
+## 2. scRNA
 2.1 scRNA: Preprocess
 
 2.2 scRNA: Cluster
@@ -151,7 +159,7 @@ We have provided pre-built reference configuration files for CDesk for mm10 a
 
 2.8 scRNA: Integrate
 
-## [3. ATAC ](ATAC.html)
+## 3. ATAC
 3.1 ATAC: Preprocess
 
 3.2 ATAC: QC
@@ -166,7 +174,7 @@ We have provided pre-built reference configuration files for CDesk for mm10 a
 
 3.7 ATAC: Correlation
 
-## [4. ChIPseq&CUTTag ](ChIPseq&CUTTag.html)
+## 4. ChIPseq&CUTTag
 4.1 ChIPseqCUTTag: Preprocess
 
 4.2 ChIPseqCUTTag: QC
@@ -181,7 +189,7 @@ We have provided pre-built reference configuration files for CDesk for mm10 a
 
 4.7 ChIPseqCUTTag: Correlation
 
-## [5. HiC ](HiC.html)
+## 5. HiC
 5.1 HiC: Preprocess
 
 5.2 HiC: Sample Correlation
