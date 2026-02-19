@@ -15,11 +15,11 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 </div>
 
 ## Installation
-1. Donwload the scripts
+### 1. Donwload the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
-2. Prepare the Conda Environments
+### 2. Prepare the Conda Environments
 ```
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
@@ -30,7 +30,7 @@ We provide Conda environments containing the required software, R, and Python de
 
 Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
 
-3. Prepare the Data and Write the Configuration File
+### 3. Prepare the Data and Write the Configuration File
    
 You need to prepare reference data for the species of interest and specify the corresponding file paths in the config.json configuration file. This file stores paths to genomic data, annotation files, and any additional software installations.
 
@@ -121,89 +121,3 @@ An example configuration is provided below. You can customize it to support addi
 <br>
 
 We have provided pre-built reference configuration files for CDesk for mm10 and hg38, including refseq_bed, tf_file, promoter_file, TE_idx, and refgenes in Zenodo at https://doi.org/10.5281/zenodo.18666888.
-
-## 0. Tools and tips
-0.1 Tools: Data download
-
-0.2 Prepare: Prepare input csv
-
-## 1. BulkRNA
-1.1 bulkRNA: Preprocess
-
-1.2 bulkRNA: Correlation
-
-1.3 bulkRNA: DEG
-
-1.4 bulkRNA: Enrich
-
-1.5 bulkRNA: Similarity
-
-1.6 bulkRNA: Clustering
-
-1.7 bulkRNA: Splice
-
-## 2. scRNA
-2.1 scRNA: Preprocess
-
-2.2 scRNA: Cluster
-
-2.3 scRNA: Annotation
-
-2.4 scRNA: Marker
-
-2.5 scRNA: Trajectory
-
-2.6 scRNA: Similarity
-
-2.7 scRNA: Interaction
-
-2.8 scRNA: Integrate
-
-## 3. ATAC
-3.1 ATAC: Preprocess
-
-3.2 ATAC: QC
-
-3.3 ATAC: Dynamic
-
-3.4 ATAC: Motif
-
-3.5 ATAC: Accessbility
-
-3.6 ATAC: IGV
-
-3.7 ATAC: Correlation
-
-## 4. ChIPseq&CUTTag
-4.1 ChIPseqCUTTag: Preprocess
-
-4.2 ChIPseqCUTTag: QC
-
-4.3 ChIPseqCUTTag: Pattern
-
-4.4 ChIPseqCUTTag: Motif
-
-4.5 ChIPseqCUTTag: Accessbility
-
-4.6 ChIPseqCUTTag: IGV
-
-4.7 ChIPseqCUTTag: Correlation
-
-## 5. HiC
-5.1 HiC: Preprocess
-
-5.2 HiC: Sample Correlation
-
-5.3 HiC: Matrix balancing and Format transformation
-
-5.4 HiC: TAD
-
-5.5 HiC: Compartment
-
-5.6 HiC: Loop
-
-5.7 HiC: 3D reconstruction
-
-5.8 HiC: Distance-contact
-
-5.9 HiC: Contact compare
