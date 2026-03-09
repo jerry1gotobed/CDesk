@@ -89,7 +89,7 @@ perform_enrichment <- function(gene_file, species) {
                             minGSSize = 1,
                             maxGSSize = 5000,
                             pvalueCutoff = 0.05,
-                            qvalueCutoff = 0.5,use_internal_data = T)
+                            qvalueCutoff = 0.5,use_internal_data = F)
 
   enrich_KEGG_df <- setReadable(enrich_KEGG, OrgDb = org_db, keyType="ENTREZID")
   enrich_KEGG_df = enrich_KEGG_df@result  
