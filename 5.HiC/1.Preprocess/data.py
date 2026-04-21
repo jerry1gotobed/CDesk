@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import argparse
 import sys
+import shutil
 
 parser = argparse.ArgumentParser(description="Run CStreet analysis")
 parser.add_argument("-i",required=True,type=str, help="Input expression matrixes list file")
