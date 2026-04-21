@@ -129,9 +129,21 @@ if (length(all_genes) == 0){
 }
 
 # scRNA对象
-scRNA_data <- merge(scRNA_list[[1]],y=scRNA_list[-1])
-scRNA_data = NormalizeData(scRNA_data,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
-scRNA_data = RunPCA(scRNA_data,npcs=pc.num,verbose=FALSE)
+if (length(scRNA_list) == 1) {
+  scRNA_data <- scRNA_list[[1]]
+  scRNA_data = NormalizeData(scRNA_data,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
+  scRNA_data = RunPCA(scRNA_data,npcs=pc.num,verbose=FALSE)
+} else {
+  scRNA_data <- merge(scRNA_list[[1]],y=scRNA_list[-1])
+  scRNA_data = NormalizeData(scRNA_data,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
+  scRNA_data = RunPCA(scRNA_data,npcs=pc.num,verbose=FALSE)
+
+  scRNA_data  <- IntegrateLayers(
+        object = scRNA_data, method = HarmonyIntegration,
+        orig.reduction = "pca", new.reduction = "harmony",
+        verbose = FALSE,features=all_genes
+  )
+}
 
 scRNA_data  <- IntegrateLayers( 
   object = scRNA_data, method = HarmonyIntegration,
