@@ -44,7 +44,7 @@ ident.1 <- WhichCells(scRNA, idents = as.character(opt$cell_type_1))
 ident.2 <- WhichCells(scRNA, idents = as.character(opt$cell_type_2))
 
 # Find marker genes
-mfb.markers <- FindMarkers(object = scRNA, 
+mfb.markers <- FindMarkers(object = scRNA, layer = 'data',
 			                              min.pct = opt$min_pct,
 						                                 logfc.threshold = opt$logFCfilter,
 						                                 ident.1 = ident.1, 
