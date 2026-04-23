@@ -10,6 +10,7 @@ find_significant_markers <- function(scRNA_filt,cluster_group, logFCfilter = 0.5
     #Idents(scRNA_filt) = scRNA_filt@meta.data$tsne_clusters
     # Calculate marker genes
     pbmc.markers <- FindAllMarkers(object = scRNA_filt,
+								   layer = 'data',
                                    group.by = cluster_group,
 				                           only.pos = FALSE,
 								                   min.pct = min_pct,
