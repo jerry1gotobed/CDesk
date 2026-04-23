@@ -87,6 +87,7 @@ if (mode=='merge'){
     Seu_obj_list[[sample_name]] <- seurat_obj
   }
   sce.all<-merge(Seu_obj_list[[1]],y=Seu_obj_list[-1])
+  sce.all<-JoinLayers(sce.all)
   saveRDS(sce.all,file=paste0(output_directory,'/','merged.rds'))
   sce.all = NormalizeData(sce.all,verbose=F) %>% FindVariableFeatures(nfeatures=nfeatures_used,verbose=F)%>% ScaleData(verbose=F)
   sce.all = RunPCA(sce.all,npcs=pc.num,verbose=FALSE)
@@ -116,6 +117,7 @@ if (mode=='merge'){
     #group.by.vars    = "merge_sample",
     verbose = FALSE, k.anchor = k_anchor
   )
+  sce.all<-JoinLayers(sce.all)
   saveRDS(sce.all,file=paste0(output_directory,'/','merged_CCA.rds'))
   sce.all = RunUMAP(sce.all,reduction = 'CCA',dims=1:umap_pc,verbose=F)
   p = DimPlot(sce.all,group.by = 'merge_sample')
@@ -143,6 +145,7 @@ if (mode=='merge'){
     group.by.vars    = "merge_sample",
     verbose = FALSE,max.iter.harmony = max_iter_harmony
   )
+  sce.all<-JoinLayers(sce.all)
   saveRDS(sce.all,file=paste0(output_directory,'/','merged_harmony.rds'))
   sce.all = RunUMAP(sce.all,reduction = 'harmony',dims=1:umap_pc,verbose=F)
   p = DimPlot(sce.all,group.by = 'merge_sample')
