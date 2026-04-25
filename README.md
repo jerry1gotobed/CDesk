@@ -20,6 +20,8 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
 ### 2. Prepare the Conda Environments
+
+Linux / macOS (or Windows with WSL): Use Conda/Mamba environments.
 ```
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
@@ -27,6 +29,18 @@ mamba env create -f CDesk_py2.7.yml
 mamba env create -f CDesk_R.yml
 ```
 We provide Conda environments containing the required software, R, and Python dependencies used in the scripts (some tools may require additional manual installation). We recommend using mamba instead of conda for faster environment setup.
+
+Windows: Some software may not be installable via Conda on Windows. Therefore, we also provide a pre-built Docker image that contains the complete CDesk environment. You can download the Docker image archive from: https://doi.org/10.5281/zenodo.19709171.
+
+After downloading cdesk-shared.tar, load and run the Docker container as follows:
+```
+docker load -i cdesk-shared.tar
+
+docker run -it --name container_name \
+  -v /path/to/your/CDesk:/CDesk \
+  cdesk-shared:1.0 /bin/bash
+```
+Once inside the container, you are in the CDesk environment and can execute the analysis scripts directly.
 
 Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
 
@@ -120,4 +134,4 @@ An example configuration is provided below. You can customize it to support addi
 
 <br>
 
-We have provided pre-built reference configuration files for CDesk for mm10 and hg38, including refseq_bed, tf_file, promoter_file, TE_idx, and refgenes in Zenodo at https://doi.org/10.5281/zenodo.18666888.
+We have provided pre-built reference configuration files for CDesk for mm10 and hg38, including refseq_bed, tf_file, promoter_file, TE_idx, and refgenes in Zenodo at https://doi.org/10.5281/zenodo.19709171.
