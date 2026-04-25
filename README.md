@@ -21,7 +21,7 @@ git clone https://github.com/jerry1gotobed/CDesk_develop.git
 ```
 ### 2. Prepare the Conda Environments
 
-Linux / macOS (or Windows with WSL): Use Conda/Mamba environments.
+- **Linux / macOS (or Windows with WSL)**: Use Conda/Mamba environments.
 ```
 mamba env create -f CDesk.yml
 mamba env create -f CDesk_py3.7.yml
@@ -30,7 +30,7 @@ mamba env create -f CDesk_R.yml
 ```
 We provide Conda environments containing the required software, R, and Python dependencies used in the scripts (some tools may require additional manual installation). We recommend using mamba instead of conda for faster environment setup.
 
-Windows: Some software may not be installable via Conda on Windows. Therefore, we also provide a pre-built Docker image that contains the complete CDesk environment. You can download the Docker image archive from: https://doi.org/10.5281/zenodo.19709171.
+- **Windows**: Some software may not be installable via Conda on Windows. Therefore, we also provide a pre-built Docker image that contains the complete CDesk environment. You can download the Docker image archive from: https://doi.org/10.5281/zenodo.19709171.
 
 After downloading cdesk-shared.tar, load and run the Docker container as follows:
 ```
