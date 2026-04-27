@@ -17,7 +17,7 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 ## Installation
 ### 1. Donwload the scripts
 ```
-git clone https://github.com/jerry1gotobed/CDesk_develop.git
+git clone https://github.com/jerry1gotobed/CDesk.git
 ```
 ### 2. Prepare the Conda Environments
 
