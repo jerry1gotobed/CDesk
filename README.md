@@ -34,8 +34,10 @@ We provide Conda environments containing the required software, R, and Python de
 
 After downloading cdesk-shared.tar, load and run the Docker container as follows:
 ```
+# This takes time to load the large environment
 docker load -i cdesk-shared.tar
 
+# This may take a few minutes
 docker run -it --name container_name \
   -v /path/to/your/CDesk:/CDesk \
   cdesk-shared:1.0 /bin/bash
