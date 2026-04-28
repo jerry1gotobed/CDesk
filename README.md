@@ -15,11 +15,11 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 </div>
 
 ## Installation
-### Download the scripts
+### · Download the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk.git
 ```
-### Prepare the Conda Environments
+### · Prepare the Conda Environments
 
 - **Linux / macOS (or Windows with WSL)**: Use Conda/Mamba environments.
 ```
@@ -57,16 +57,19 @@ chmod -R +x /CDesk
 ```
 Once inside the container, you are in the CDesk environment and can execute the analysis scripts directly.
 
-### After installation, you should be able to run CDesk now
+### · After installation, you should be able to run CDesk now
 ```
-# It wouls show something like this
 CDesk -h
+```
+
+```
+# It would show something like this
 ——————————————————————————————Load CDesk environment——————————————————————————————
 Load CDesk from conda environment: /opt/conda/envs/CDesk
 Load CDesk_py3.7 from conda environment: /opt/conda/envs/CDesk_py3.7
 Load CDesk_py2.7 from conda environment: /opt/conda/envs/CDesk_py2.7
 Load CDesk_R from conda environment: /opt/conda/envs/CDesk_R
-——————————————————————————————CDesk environment ready—————————————————— ————————————
+——————————————————————————————CDesk environment ready——————————————————————————————
 usage: CDesk [-h] {tools,bulkRNA,scRNA,ATAC,ChIPseqCUTTag,HiC} ...
 
 CDesk multiomics pipeline
