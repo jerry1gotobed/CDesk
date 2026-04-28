@@ -15,11 +15,11 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 </div>
 
 ## Installation
-### ** Download the scripts **
+### Download the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk.git
 ```
-### ** Prepare the Conda Environments **
+### Prepare the Conda Environments
 
 - **Linux / macOS (or Windows with WSL)**: Use Conda/Mamba environments.
 ```
@@ -57,7 +57,7 @@ chmod -R +x /CDesk
 ```
 Once inside the container, you are in the CDesk environment and can execute the analysis scripts directly.
 
-### ** After installation, you should be able to run CDesk now **
+### After installation, you should be able to run CDesk now
 ```
 CDesk -h
 
@@ -87,7 +87,7 @@ options:
 ```
 Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
 
-### ** Prepare the Data and Write the Configuration File **
+### Prepare the Data and Write the Configuration File
    
 You need to prepare reference data for the species of interest and specify the corresponding file paths in the config.json configuration file. This file stores paths to genomic data, annotation files, and any additional software installations.
 
