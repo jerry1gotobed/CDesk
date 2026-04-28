@@ -38,6 +38,7 @@ sudo ln -s /path/to/your/CDesk/CDesk /usr/local/bin/CDesk
 mkdir -p ~/.local/bin
 export PATH="$HOME/.local/bin:$PATH"
 ln -s /path/to/your/CDesk/CDesk ~/.local/bin/CDesk
+# Replace "/path/to/your/CDesk" with the path to your local CDesk folder
 ```
 
 - **Windows**: Some software may not be installable via Conda on Windows. Therefore, we also provide a pre-built Docker image that contains the complete CDesk environment. You can download the Docker image archive from: https://doi.org/10.5281/zenodo.19709171.
@@ -51,6 +52,7 @@ docker load -i cdesk-shared.tar
 docker run -it --name container_name \
   -v /path/to/your/CDesk:/CDesk \
   cdesk-shared:1.0 /bin/bash
+# Replace "/path/to/your/CDesk" with the path to your local CDesk folder
 
 # Add execution permissions
 chmod -R +x /CDesk
