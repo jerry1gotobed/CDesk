@@ -49,6 +49,6 @@
       "bowtie2_mapindex":".../hg38",
       "singleron_mapindex":".../hg38",
       "dnbc_mapindex":".../hg38"
-    },
+    }
   }
 }
