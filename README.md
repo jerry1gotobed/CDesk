@@ -32,12 +32,15 @@ We provide Conda environments containing the required software, R, and Python de
 ```
 # Add execution permissions
 chmod -R +x /path/to/your/CDesk
+
 # Create a symbolic link to a system bin directory (requires sudo)
 sudo ln -s /path/to/your/CDesk/CDesk /usr/local/bin/CDesk
+
 # OR create a symbolic link to user local bin (no sudo)
 mkdir -p ~/.local/bin
 export PATH="$HOME/.local/bin:$PATH"
 ln -s /path/to/your/CDesk/CDesk ~/.local/bin/CDesk
+
 # Replace "/path/to/your/CDesk" with the path to your local CDesk folder
 ```
 
