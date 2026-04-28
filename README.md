@@ -15,11 +15,11 @@ CDesk is an integrated multi-omics analysis pipeline designed for processing dat
 </div>
 
 ## Installation
-### 1. Donwload the scripts
+### Download the scripts
 ```
 git clone https://github.com/jerry1gotobed/CDesk.git
 ```
-### 2. Prepare the Conda Environments
+### Prepare the Conda Environments
 
 - **Linux / macOS (or Windows with WSL)**: Use Conda/Mamba environments.
 ```
@@ -29,6 +29,16 @@ mamba env create -f CDesk_py2.7.yml
 mamba env create -f CDesk_R.yml
 ```
 We provide Conda environments containing the required software, R, and Python dependencies used in the scripts (some tools may require additional manual installation). We recommend using mamba instead of conda for faster environment setup.
+```
+# Add execution permissions
+chmod -R +x /path/to/your/CDesk
+# Create a symbolic link to a system bin directory (requires sudo)
+sudo ln -s /path/to/your/CDesk/CDesk /usr/local/bin/CDesk
+# OR create a symbolic link to user local bin (no sudo)
+mkdir -p ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"
+ln -s /path/to/your/CDesk/CDesk ~/.local/bin/CDesk
+```
 
 - **Windows**: Some software may not be installable via Conda on Windows. Therefore, we also provide a pre-built Docker image that contains the complete CDesk environment. You can download the Docker image archive from: https://doi.org/10.5281/zenodo.19709171.
 
@@ -41,12 +51,42 @@ docker load -i cdesk-shared.tar
 docker run -it --name container_name \
   -v /path/to/your/CDesk:/CDesk \
   cdesk-shared:1.0 /bin/bash
+
+# Add execution permissions
+chmod -R +x /CDesk
 ```
 Once inside the container, you are in the CDesk environment and can execute the analysis scripts directly.
 
+### After installation, you should be able to run CDesk now
+```
+# It wouls show something like this
+CDesk -h
+——————————————————————————————Load CDesk environment——————————————————————————————
+Load CDesk from conda environment: /opt/conda/envs/CDesk
+Load CDesk_py3.7 from conda environment: /opt/conda/envs/CDesk_py3.7
+Load CDesk_py2.7 from conda environment: /opt/conda/envs/CDesk_py2.7
+Load CDesk_R from conda environment: /opt/conda/envs/CDesk_R
+——————————————————————————————CDesk environment ready—————————————————— ————————————
+usage: CDesk [-h] {tools,bulkRNA,scRNA,ATAC,ChIPseqCUTTag,HiC} ...
+
+CDesk multiomics pipeline
+
+positional arguments:
+  {tools,bulkRNA,scRNA,ATAC,ChIPseqCUTTag,HiC}
+                        Choose an omic to run the script
+    tools               Some other tools
+    bulkRNA             bulkRNA-seq pipeline
+    scRNA               scRNA pipeline
+    ATAC                ATAC pipeline
+    ChIPseqCUTTag       ChIPseq&CUTTag pipeline
+    HiC                 HiC pipeline
+
+options:
+  -h, --help            show this help message and exit
+```
 Each time you run CDesk, it first checks for the presence of the required CDesk Conda or Mamba environments. You can also specify custom environment paths in the configuration file. If no Conda/Mamba environment is found, CDesk will fall back to your system's default environment. However, this may lead to compatibility issues if dependencies are missing or mismatched.
 
-### 3. Prepare the Data and Write the Configuration File
+### Prepare the Data and Write the Configuration File
    
 You need to prepare reference data for the species of interest and specify the corresponding file paths in the config.json configuration file. This file stores paths to genomic data, annotation files, and any additional software installations.
 
@@ -108,7 +148,7 @@ An example configuration is provided below. You can customize it to support addi
       "bowtie2_mapindex":".../hg38",
       "singleron_mapindex":".../hg38",
       "dnbc_mapindex":".../hg38"
-    },
+    }
   }
 }
 
