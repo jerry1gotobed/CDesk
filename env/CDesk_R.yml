@@ -60,3 +60,6 @@ dependencies:
   - bioconductor-bsgenome.ggallus.ucsc.galgal6
   - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
   - macs3
+  - pip:
+    - anndata
+    - git+https://github.com/JiekaiLab/scTE.git
