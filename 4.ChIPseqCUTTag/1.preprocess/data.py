@@ -110,5 +110,6 @@ for idx, row in test.iterrows():
                 os.remove(os.path.join(data_dir,sample+'_single.fq.gz')) 
             os.symlink(os.path.abspath(row['fq2']),os.path.join(data_dir,sample+'_single.fq.gz'))  
 
-if len(os.listdir(data_dir)) == 0:
-    print('No fq files found')
+if len(os.listdir(data_dir)) == 0 and len(os.listdir(bam_dir)) == 0:
+    print('No fq or bam files found')
+    sys.exit(1)
